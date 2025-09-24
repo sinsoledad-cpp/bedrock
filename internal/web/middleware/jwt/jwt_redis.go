@@ -12,7 +12,7 @@ import (
 	"time"
 )
 
-var _ JWT = &RedisJWTHandler{}
+var _ Handler = &RedisJWTHandler{}
 
 type RedisJWTHandler struct {
 	client        redis.Cmdable
@@ -20,7 +20,7 @@ type RedisJWTHandler struct {
 	rcExpiration  time.Duration
 }
 
-func NewRedisJWTHandler(client redis.Cmdable) JWT {
+func NewRedisJWTHandler(client redis.Cmdable) Handler {
 	return &RedisJWTHandler{
 		client:        client,
 		signingMethod: jwt.SigningMethodHS512,
@@ -82,7 +82,7 @@ func (r *RedisJWTHandler) SetJWTToken(ctx *gin.Context, uid int64, ssid string) 
 		},
 	}
 	token := jwt.NewWithClaims(r.signingMethod, uc)
-	tokenStr, err := token.SignedString(JWTKey)
+	tokenStr, err := token.SignedString(AccessTokenKey)
 	if err != nil {
 		return err
 	}
@@ -99,7 +99,7 @@ func (r *RedisJWTHandler) setRefreshToken(ctx *gin.Context, uid int64, ssid stri
 		},
 	}
 	token := jwt.NewWithClaims(r.signingMethod, rc)
-	tokenStr, err := token.SignedString(RCJWTKey)
+	tokenStr, err := token.SignedString(RefreshTokenKey)
 	if err != nil {
 		return err
 	}

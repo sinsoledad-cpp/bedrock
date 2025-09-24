@@ -6,7 +6,7 @@ import (
 )
 
 //go:generate mockgen -source=./types.go -package=jwtmocks -destination=./mocks/handler.mock.go Handler
-type JWT interface {
+type Handler interface {
 	ClearToken(ctx *gin.Context) error
 	SetLoginToken(ctx *gin.Context, uid int64) error
 	SetJWTToken(ctx *gin.Context, uid int64, ssid string) error
@@ -14,8 +14,8 @@ type JWT interface {
 	ExtractTokenString(ctx *gin.Context) string
 }
 
-var JWTKey = []byte("k6CswdUm77WKcbM68UQUuxVsHSpTCwgK")
-var RCJWTKey = []byte("k6CswdUm77WKcbM68UQUuxVsHSpTCwgA") //Refresh Claims
+var AccessTokenKey = []byte("k6CswdUm77WKcbM68UQUuxVsHSpTCwgK")
+var RefreshTokenKey = []byte("k6CswdUm77WKcbM68UQUuxVsHSpTCwgA") //Refresh Claims
 
 type UserClaims struct {
 	jwt.RegisteredClaims
