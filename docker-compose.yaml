@@ -1,6 +1,3 @@
-# 通用环境
-version: '3.0'
-
 networks:
   net01:
     driver: bridge

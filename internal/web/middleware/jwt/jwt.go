@@ -1,0 +1,31 @@
+package jwt
+
+import (
+	"github.com/gin-gonic/gin"
+	"github.com/golang-jwt/jwt/v5"
+)
+
+//go:generate mockgen -source=./types.go -package=jwtmocks -destination=./mocks/handler.mock.go Handler
+type JWT interface {
+	ClearToken(ctx *gin.Context) error
+	SetLoginToken(ctx *gin.Context, uid int64) error
+	SetJWTToken(ctx *gin.Context, uid int64, ssid string) error
+	CheckSession(ctx *gin.Context, ssid string) error
+	ExtractTokenString(ctx *gin.Context) string
+}
+
+var JWTKey = []byte("k6CswdUm77WKcbM68UQUuxVsHSpTCwgK")
+var RCJWTKey = []byte("k6CswdUm77WKcbM68UQUuxVsHSpTCwgA") //Refresh Claims
+
+type UserClaims struct {
+	jwt.RegisteredClaims
+	Uid       int64
+	Ssid      string
+	UserAgent string
+}
+
+type RefreshClaims struct {
+	jwt.RegisteredClaims
+	Uid  int64  //User ID
+	Ssid string //Session ID
+}
