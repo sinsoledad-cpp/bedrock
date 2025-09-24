@@ -6,6 +6,7 @@ import (
 	"bedrock/internal/repository/dao"
 	"context"
 	"database/sql"
+	"time"
 )
 
 var (
@@ -15,7 +16,7 @@ var (
 
 type UserRepository interface {
 	Create(ctx context.Context, user domain.User) error
-	//FindByEmail(ctx context.Context, email string) (domain.User, error)
+	FindByEmail(ctx context.Context, email string) (domain.User, error)
 	//UpdateNonZeroFields(ctx context.Context, user domain.User) error
 	//FindByPhone(ctx context.Context, phone string) (domain.User, error)
 	//FindById(ctx context.Context, uID int64) (domain.User, error)
@@ -34,11 +35,17 @@ func NewCachedUserRepository(userDAO dao.UserDAO, userCache cache.UserCache) Use
 	}
 }
 
-func (u *CachedUserRepository) Create(ctx context.Context, user domain.User) error {
-	return u.userDAO.Insert(ctx, u.toEntity(user))
+func (c *CachedUserRepository) Create(ctx context.Context, user domain.User) error {
+	return c.userDAO.Insert(ctx, c.toEntity(user))
 }
-
-func (u *CachedUserRepository) toEntity(user domain.User) dao.User {
+func (c *CachedUserRepository) FindByEmail(ctx context.Context, email string) (domain.User, error) {
+	u, err := c.userDAO.FindByEmail(ctx, email)
+	if err != nil {
+		return domain.User{}, err
+	}
+	return c.toDomain(u), nil
+}
+func (c *CachedUserRepository) toEntity(user domain.User) dao.User {
 	return dao.User{
 		ID: user.ID,
 		Email: sql.NullString{
@@ -61,5 +68,21 @@ func (u *CachedUserRepository) toEntity(user domain.User) dao.User {
 		},
 		AboutMe:  user.AboutMe,
 		Nickname: user.Nickname,
+	}
+}
+func (c *CachedUserRepository) toDomain(u dao.User) domain.User {
+	return domain.User{
+		ID:       u.ID,
+		Email:    u.Email.String,
+		Phone:    u.Phone.String,
+		Password: u.Password,
+		AboutMe:  u.AboutMe,
+		Nickname: u.Nickname,
+		Birthday: time.UnixMilli(u.Birthday),
+		Ctime:    time.UnixMilli(u.Ctime),
+		WechatInfo: domain.WechatInfo{
+			OpenID:  u.WechatOpenId.String,
+			UnionID: u.WechatUnionId.String,
+		},
 	}
 }

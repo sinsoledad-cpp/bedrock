@@ -17,7 +17,7 @@ var (
 //go:generate mockgen -source=./user.go -package=mocks -destination=./mocks/user.mock.go UserService
 type UserService interface {
 	Signup(ctx context.Context, user domain.User) error
-	//Login(ctx context.Context, email string, password string) (domain.User, error)
+	Login(ctx context.Context, email string, password string) (domain.User, error)
 	//UpdateNonSensitiveInfo(ctx context.Context, user domain.User) error
 	//FindById(ctx context.Context, uid int64) (domain.User, error)
 	//FindOrCreate(ctx context.Context, phone string) (domain.User, error)
@@ -42,4 +42,19 @@ func (svc *DefaultUserService) Signup(ctx context.Context, u domain.User) error 
 	}
 	u.Password = string(hash)
 	return svc.repo.Create(ctx, u)
+}
+func (svc *DefaultUserService) Login(ctx context.Context, email string, password string) (domain.User, error) {
+	u, err := svc.repo.FindByEmail(ctx, email)
+	if errors.Is(err, repository.ErrUserNotFound) {
+		return domain.User{}, ErrInvalidUserOrPassword
+	}
+	if err != nil {
+		return domain.User{}, err
+	}
+	// 检查密码对不对
+	err = bcrypt.CompareHashAndPassword([]byte(u.Password), []byte(password))
+	if err != nil {
+		return domain.User{}, ErrInvalidUserOrPassword
+	}
+	return u, nil
 }

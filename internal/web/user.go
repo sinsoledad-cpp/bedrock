@@ -4,6 +4,7 @@ import (
 	"bedrock/internal/domain"
 	"bedrock/internal/service"
 	"bedrock/internal/web/errs"
+	"bedrock/internal/web/middleware/jwt"
 	"bedrock/pkg/ginx"
 	"bedrock/pkg/logger"
 	"errors"
@@ -23,6 +24,7 @@ const (
 type UserHandler struct {
 	log              logger.Logger
 	userSvc          service.UserService
+	jwt              jwt.Handler
 	emailRegexExp    *regexp.Regexp
 	passwordRegexExp *regexp.Regexp
 }
@@ -39,6 +41,8 @@ func NewUserHandler(log logger.Logger, userSvc service.UserService) *UserHandler
 func (u *UserHandler) RegisterRoutes(e *gin.Engine) {
 	g := e.Group("/user")
 	g.POST("/ping", u.Ping)
+	g.POST("/signup", ginx.WrapBody(u.SignUp))
+	g.POST("/login", ginx.WrapBody(u.LoginJWT))
 }
 func (u *UserHandler) Ping(ctx *gin.Context) {
 	ctx.String(http.StatusOK, "ping pong")
@@ -104,4 +108,30 @@ func (u *UserHandler) SignUp(ctx *gin.Context, req SignUpReq) (ginx.Result, erro
 		Code: http.StatusCreated,
 		Msg:  "注册成功",
 	}, nil
+}
+
+type LoginJWTReq struct {
+	Email    string `json:"email"`
+	Password string `json:"password"`
+}
+
+func (u *UserHandler) LoginJWT(ctx *gin.Context, req LoginJWTReq) (ginx.Result, error) {
+	user, err := u.userSvc.Login(ctx, req.Email, req.Password)
+	switch err {
+	case nil:
+		err = u.jwt.SetLoginToken(ctx, user.ID)
+		if err != nil {
+			return ginx.Result{
+				Code: 5,
+				Msg:  "系统错误",
+			}, err
+		}
+		return ginx.Result{
+			Msg: "OK",
+		}, nil
+	case service.ErrInvalidUserOrPassword:
+		return ginx.Result{Msg: "用户名或者密码错误"}, nil
+	default:
+		return ginx.Result{Msg: "系统错误"}, err
+	}
 }
