@@ -1,7 +1,6 @@
 package jwt
 
 import (
-	"errors"
 	"fmt"
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
@@ -34,7 +33,7 @@ func (r *RedisJWTHandler) CheckSession(ctx *gin.Context, ssid string) error {
 		return err
 	}
 	if cnt > 0 {
-		return errors.New("token 无效，会话已失效")
+		return ErrSessionNotFound
 	}
 	return nil
 }

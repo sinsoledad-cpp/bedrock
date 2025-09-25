@@ -1,9 +1,12 @@
 package jwt
 
 import (
+	"errors"
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
 )
+
+var ErrSessionNotFound = errors.New("会话不存在或已过期")
 
 //go:generate mockgen -source=./types.go -package=jwtmocks -destination=./mocks/handler.mock.go Handler
 type Handler interface {

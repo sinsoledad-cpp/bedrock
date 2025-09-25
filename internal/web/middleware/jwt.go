@@ -9,12 +9,12 @@ import (
 	"time"
 )
 
-type JWTLoginMiddlewareBuilder struct {
+type JWTAuth struct {
 	publicPaths set.Set[string]
-	jwtware.Handler
+	hdl         jwtware.Handler
 }
 
-func NewJWTLoginMiddlewareBuilder(hdl jwtware.Handler) *JWTLoginMiddlewareBuilder {
+func NewJWTAuth(hdl jwtware.Handler) *JWTAuth {
 	s := set.NewMapSet[string](6)
 	s.Add("/users/signup")
 	s.Add("/users/login_sms/code/send")
@@ -24,19 +24,19 @@ func NewJWTLoginMiddlewareBuilder(hdl jwtware.Handler) *JWTLoginMiddlewareBuilde
 	s.Add("/oauth2/wechat/authurl")
 	s.Add("/oauth2/wechat/callback")
 	s.Add("/test/random")
-	return &JWTLoginMiddlewareBuilder{
+	return &JWTAuth{
 		publicPaths: s,
-		Handler:     hdl,
+		hdl:         hdl,
 	}
 }
-func (j *JWTLoginMiddlewareBuilder) Build() gin.HandlerFunc {
+func (j *JWTAuth) Middleware() gin.HandlerFunc {
 	return func(ctx *gin.Context) {
 		// 不需要校验
 		if j.publicPaths.Exist(ctx.Request.URL.Path) {
 			return
 		}
 		// 如果是空字符串，你可以预期后面 Parse 就会报错
-		tokenStr := j.ExtractTokenString(ctx)
+		tokenStr := j.hdl.ExtractTokenString(ctx)
 		uc := jwtware.UserClaims{}
 		token, err := jwt.ParseWithClaims(tokenStr, &uc, func(token *jwt.Token) (interface{}, error) {
 			return jwtware.AccessTokenKey, nil
@@ -67,7 +67,7 @@ func (j *JWTLoginMiddlewareBuilder) Build() gin.HandlerFunc {
 		//	return
 		//}
 
-		err = j.CheckSession(ctx, uc.Ssid)
+		err = j.hdl.CheckSession(ctx, uc.Ssid)
 		if err != nil {
 			// 系统错误或者用户已经主动退出登录了
 			// 这里也可以考虑说，如果在 Redis 已经崩溃的时候，
