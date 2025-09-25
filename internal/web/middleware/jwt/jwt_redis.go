@@ -65,9 +65,7 @@ func (r *RedisJWTHandler) ClearToken(ctx *gin.Context) error {
 	ctx.Header("x-refresh-token", "")
 	uc := ctx.MustGet("user").(UserClaims)
 
-	return r.client.Set(ctx,
-		fmt.Sprintf("users:ssid:%s", uc.Ssid),
-		"", r.rcExpiration).Err()
+	return r.client.Set(ctx, fmt.Sprintf("users:ssid:%s", uc.Ssid), "", r.rcExpiration).Err()
 }
 
 func (r *RedisJWTHandler) SetJWTToken(ctx *gin.Context, uid int64, ssid string) error {

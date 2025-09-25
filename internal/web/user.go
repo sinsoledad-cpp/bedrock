@@ -44,6 +44,7 @@ func (u *UserHandler) RegisterRoutes(e *gin.Engine) {
 	g.POST("/ping", u.Ping)
 	g.POST("/signup", ginx.WrapBody(u.SignUp))
 	g.POST("/login", ginx.WrapBody(u.LoginJWT))
+	g.POST("/logout", ginx.Wrap(u.LogoutJWT))
 	g.POST("/refresh_token", ginx.Wrap(u.RefreshToken))
 }
 func (u *UserHandler) Ping(ctx *gin.Context) {
@@ -143,6 +144,21 @@ func (u *UserHandler) LoginJWT(ctx *gin.Context, req LoginJWTReq) (ginx.Result, 
 			Msg:  "系统错误",
 		}, err
 	}
+}
+
+func (u *UserHandler) LogoutJWT(ctx *gin.Context) (ginx.Result, error) {
+	err := u.jwtware.ClearToken(ctx)
+	if err != nil {
+		ctx.JSON(http.StatusOK, ginx.Result{Code: http.StatusInternalServerError, Msg: "系统错误"})
+		return ginx.Result{
+			Code: http.StatusInternalServerError,
+			Msg:  "系统错误",
+		}, err
+	}
+	return ginx.Result{
+		Code: http.StatusOK,
+		Msg:  "退出登录成功",
+	}, nil
 }
 
 func (u *UserHandler) RefreshToken(ctx *gin.Context) (ginx.Result, error) {
