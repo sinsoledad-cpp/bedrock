@@ -12,6 +12,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
 	"net/http"
+	"time"
 )
 
 var _ Handler = (*UserHandler)(nil)
@@ -236,6 +237,32 @@ func (u *UserHandler) UploadAvatar(ctx *gin.Context, uc jwtware.UserClaims) (gin
 		Msg:  "头像上传成功",
 		Data: gin.H{
 			"avatar_url": avatarPath, // 返回头像路径
+		},
+	}, nil
+}
+
+func (u *UserHandler) Profile(ctx *gin.Context, uc jwtware.UserClaims) (ginx.Result, error) {
+	user, err := u.userSvc.FindById(ctx, uc.Uid)
+	if err != nil {
+		return ginx.Result{
+			Code: 5,
+			Msg:  "系统错误",
+		}, err
+	}
+	type User struct {
+		Nickname string `json:"nickname"`
+		Email    string `json:"email"`
+		AboutMe  string `json:"aboutMe"`
+		Birthday string `json:"birthday"`
+		Avatar   string `json:"avatar"`
+	}
+	return ginx.Result{
+		Data: User{
+			Nickname: user.Nickname,
+			Email:    user.Email,
+			AboutMe:  user.AboutMe,
+			Birthday: user.Birthday.Format(time.DateOnly),
+			Avatar:   user.Avatar,
 		},
 	}, nil
 }
