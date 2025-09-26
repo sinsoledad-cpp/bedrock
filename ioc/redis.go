@@ -11,3 +11,28 @@ func InitRedis() redis.Cmdable {
 		Addr: viper.GetString("redis.addr"),
 	})
 }
+
+/*
+var client *redis.Client
+
+// Init 初始化连接
+func Init(cfg *conf.RedisConf) {
+	client = redis.NewClient(&redis.Options{
+		Addr:         fmt.Sprintf("%s:%d", cfg.Host, cfg.Port),
+		Password:     cfg.Password,
+		DB:           cfg.DB,           // 0 表示使用默认数据库
+		PoolSize:     cfg.PoolSize,     // 连接池大小
+		MinIdleConns: cfg.MaxIdleConns, // 最小空闲连接数
+	})
+
+	_, err := client.Ping(context.Background()).Result()
+	if err != nil {
+		zap.L().Error("connect _redis failed", zap.Error(err))
+	}
+	return
+}
+
+func Close() {
+	_ = client.Close()
+}
+*/
