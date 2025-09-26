@@ -24,7 +24,7 @@ type UserService interface {
 	Signup(ctx context.Context, user domain.User) error
 	Login(ctx context.Context, email string, password string) (domain.User, error)
 	UploadAvatar(ctx context.Context, uid int64, file *multipart.FileHeader) (string, error)
-	//UpdateNonSensitiveInfo(ctx context.Context, user domain.User) error
+	UpdateNonSensitiveInfo(ctx context.Context, user domain.User) error
 	FindById(ctx context.Context, uid int64) (domain.User, error)
 	//FindOrCreate(ctx context.Context, phone string) (domain.User, error)
 	//FindOrCreateByWechat(ctx context.Context, wechatInfo domain.WechatInfo) (domain.User, error)
@@ -132,6 +132,10 @@ func (svc *DefaultUserService) UploadAvatar(ctx context.Context, uid int64, file
 
 	// 6. 返回新文件的路径
 	return newPath, nil
+}
+func (svc *DefaultUserService) UpdateNonSensitiveInfo(ctx context.Context, user domain.User) error {
+	// UpdateNicknameAndXXAnd
+	return svc.repo.UpdateNonZeroFields(ctx, user)
 }
 func (svc *DefaultUserService) FindById(ctx context.Context, uid int64) (domain.User, error) {
 	return svc.repo.FindById(ctx, uid)

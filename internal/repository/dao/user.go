@@ -40,7 +40,7 @@ type UserDAO interface {
 	Insert(ctx context.Context, user User) error
 	FindByEmail(ctx context.Context, email string) (User, error)
 	UpdateAvatar(ctx context.Context, id int64, avatar string) error
-	//UpdateById(ctx context.Context, entity User) error
+	UpdateById(ctx context.Context, entity User) error
 	FindById(ctx context.Context, uid int64) (User, error)
 	//FindByPhone(ctx context.Context, phone string) (User, error)
 	//FindByWechat(ctx context.Context, openId string) (User, error)
@@ -93,7 +93,18 @@ func (g *GORMUserDAO) UpdateAvatar(ctx context.Context, id int64, avatar string)
 			"utime":  time.Now().UnixMilli(),
 		}).Error
 }
-
+func (g *GORMUserDAO) UpdateById(ctx context.Context, user User) error {
+	// 这种写法依赖于 GORM 的零值和主键更新特性
+	// Update 非零值 WHERE id = ?
+	//return g.db.WithContext(ctx).Updates(&user).Error
+	return g.db.WithContext(ctx).Model(&user).Where("id = ?", user.ID).
+		Updates(map[string]any{
+			"utime":    time.Now().UnixMilli(),
+			"nickname": user.Nickname,
+			"birthday": user.Birthday,
+			"about_me": user.AboutMe,
+		}).Error
+}
 func (g *GORMUserDAO) FindById(ctx context.Context, uid int64) (User, error) {
 	var res User
 	err := g.db.WithContext(ctx).Where("id = ?", uid).First(&res).Error

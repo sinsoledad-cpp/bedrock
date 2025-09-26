@@ -49,6 +49,8 @@ func (u *UserHandler) RegisterRoutes(e *gin.Engine) {
 	g.POST("/refresh_token", ginx.Wrap(u.RefreshToken))
 
 	g.POST("/avatar/upload", ginx.WrapClaims(u.UploadAvatar))
+	g.POST("/edit", ginx.WrapBodyAndClaims(u.Edit))
+
 }
 func (u *UserHandler) Ping(ctx *gin.Context) {
 	ctx.String(http.StatusOK, "ping pong")
@@ -245,7 +247,7 @@ func (u *UserHandler) Profile(ctx *gin.Context, uc jwtware.UserClaims) (ginx.Res
 	user, err := u.userSvc.FindById(ctx, uc.Uid)
 	if err != nil {
 		return ginx.Result{
-			Code: 5,
+			Code: errs.UserInternalServerError,
 			Msg:  "系统错误",
 		}, err
 	}
@@ -264,5 +266,43 @@ func (u *UserHandler) Profile(ctx *gin.Context, uc jwtware.UserClaims) (ginx.Res
 			Birthday: user.Birthday.Format(time.DateOnly),
 			Avatar:   user.Avatar,
 		},
+	}, nil
+}
+
+type UserEditReq struct {
+	// 改邮箱，密码，或者能不能改手机号
+	Nickname string `json:"nickname"`
+	// YYYY-MM-DD
+	Birthday string `json:"birthday"`
+	AboutMe  string `json:"aboutMe"`
+}
+
+func (u *UserHandler) Edit(ctx *gin.Context, req UserEditReq, uc jwtware.UserClaims) (ginx.Result, error) {
+	// 嵌入一段刷新过期时间的代码
+	//sess := sessions.Default(ctx)
+	//sess.Get("uid")
+	// 用户输入不对
+	birthday, err := time.Parse(time.DateOnly, req.Birthday)
+	if err != nil {
+		return ginx.Result{
+			Code: 4,
+			Msg:  "生日格式不对",
+		}, err
+	}
+	err = u.userSvc.UpdateNonSensitiveInfo(ctx, domain.User{
+		ID:       uc.Uid,
+		Nickname: req.Nickname,
+		Birthday: birthday,
+		AboutMe:  req.AboutMe,
+	})
+	if err != nil {
+		return ginx.Result{
+			Code: errs.UserInternalServerError,
+			Msg:  "系统错误",
+		}, err
+	}
+	return ginx.Result{
+		//Code: http.,
+		Msg: "OK",
 	}, nil
 }

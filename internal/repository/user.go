@@ -19,7 +19,7 @@ type UserRepository interface {
 	Create(ctx context.Context, user domain.User) error
 	FindByEmail(ctx context.Context, email string) (domain.User, error)
 	UpdateAvatar(ctx context.Context, id int64, avatar string) error
-	//UpdateNonZeroFields(ctx context.Context, user domain.User) error
+	UpdateNonZeroFields(ctx context.Context, user domain.User) error
 	//FindByPhone(ctx context.Context, phone string) (domain.User, error)
 
 	FindById(ctx context.Context, uID int64) (domain.User, error)
@@ -59,6 +59,20 @@ func (c *CachedUserRepository) UpdateAvatar(ctx context.Context, id int64, avata
 	//return c.userCache.Delete(ctx, id)
 	return err
 }
+
+func (c *CachedUserRepository) UpdateNonZeroFields(ctx context.Context, user domain.User) error {
+	// 更新 DB 之后，删除
+	err := c.userDAO.UpdateById(ctx, c.toEntity(user))
+	if err != nil {
+		return err
+	}
+	// 延迟一秒
+	time.AfterFunc(time.Second, func() {
+		_ = c.userCache.Delete(ctx, user.ID)
+	})
+	return c.userCache.Delete(ctx, user.ID)
+}
+
 func (c *CachedUserRepository) FindById(ctx context.Context, uid int64) (domain.User, error) {
 	du, err := c.userCache.Get(ctx, uid)
 	switch {
@@ -76,7 +90,6 @@ func (c *CachedUserRepository) FindById(ctx context.Context, uid int64) (domain.
 		//		log.Println(err)
 		//	}
 		//}()
-
 		err = c.userCache.Set(ctx, du)
 		if err != nil {
 			// 网络崩了，也可能是 redis 崩了
