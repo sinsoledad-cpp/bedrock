@@ -6,6 +6,7 @@ import (
 	"bedrock/internal/repository/dao"
 	"context"
 	"database/sql"
+	"errors"
 	"time"
 )
 
@@ -17,9 +18,11 @@ var (
 type UserRepository interface {
 	Create(ctx context.Context, user domain.User) error
 	FindByEmail(ctx context.Context, email string) (domain.User, error)
+	UpdateAvatar(ctx context.Context, id int64, avatar string) error
 	//UpdateNonZeroFields(ctx context.Context, user domain.User) error
 	//FindByPhone(ctx context.Context, phone string) (domain.User, error)
-	//FindById(ctx context.Context, uID int64) (domain.User, error)
+
+	FindById(ctx context.Context, uID int64) (domain.User, error)
 	//FindByWechat(ctx context.Context, openID string) (domain.User, error)
 }
 
@@ -44,6 +47,45 @@ func (c *CachedUserRepository) FindByEmail(ctx context.Context, email string) (d
 		return domain.User{}, err
 	}
 	return c.toDomain(u), nil
+}
+
+func (c *CachedUserRepository) UpdateAvatar(ctx context.Context, id int64, avatar string) error {
+	// 更新数据库
+	err := c.userDAO.UpdateAvatar(ctx, id, avatar)
+	//if err != nil {
+	//	return err
+	//}
+	//// 操作缓存：这里选择直接删除缓存，让下一次查询重新加载
+	//return c.userCache.Delete(ctx, id)
+	return err
+}
+func (c *CachedUserRepository) FindById(ctx context.Context, uid int64) (domain.User, error) {
+	du, err := c.userCache.Get(ctx, uid)
+	switch {
+	case err == nil: // 只要 err 为 nil，就返回
+		return du, nil
+	case errors.Is(err, cache.ErrKeyNotExist):
+		u, err := c.userDAO.FindById(ctx, uid)
+		if err != nil {
+			return domain.User{}, err
+		}
+		du = c.toDomain(u)
+		//go func() {
+		//	err = repo.cache.Set(ctx, du)
+		//	if err != nil {
+		//		log.Println(err)
+		//	}
+		//}()
+
+		err = c.userCache.Set(ctx, du)
+		if err != nil {
+			// 网络崩了，也可能是 redis 崩了
+		}
+		return du, nil
+	default:
+		// 接近降级的写法
+		return domain.User{}, err
+	}
 }
 func (c *CachedUserRepository) toEntity(user domain.User) dao.User {
 	return dao.User{

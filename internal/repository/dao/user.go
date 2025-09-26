@@ -16,6 +16,7 @@ type User struct {
 	Password string
 	Nickname string         `gorm:"type=varchar(128)"`
 	Birthday int64          // YYYY-MM-DD
+	Avatar   string         `gorm:"type:varchar(1024)"` // 头像
 	AboutMe  string         `gorm:"type=varchar(4096)"`
 	Phone    sql.NullString `gorm:"unique"` // 代表这是一个可以为 NULL 的列
 	// 1 如果查询要求同时使用 openid 和 unionid，就要创建联合唯一索引
@@ -38,8 +39,9 @@ var (
 type UserDAO interface {
 	Insert(ctx context.Context, user User) error
 	FindByEmail(ctx context.Context, email string) (User, error)
+	UpdateAvatar(ctx context.Context, id int64, avatar string) error
 	//UpdateById(ctx context.Context, entity User) error
-	//FindById(ctx context.Context, uid int64) (User, error)
+	FindById(ctx context.Context, uid int64) (User, error)
 	//FindByPhone(ctx context.Context, phone string) (User, error)
 	//FindByWechat(ctx context.Context, openId string) (User, error)
 }
@@ -82,4 +84,18 @@ func (g *GORMUserDAO) FindByEmail(ctx context.Context, email string) (User, erro
 	var u User
 	err := g.db.WithContext(ctx).Where("email=?", email).First(&u).Error
 	return u, err
+}
+
+func (g *GORMUserDAO) UpdateAvatar(ctx context.Context, id int64, avatar string) error {
+	return g.db.WithContext(ctx).Model(&User{}).Where("id = ?", id).Updates(
+		map[string]any{
+			"avatar": avatar,
+			"utime":  time.Now().UnixMilli(),
+		}).Error
+}
+
+func (g *GORMUserDAO) FindById(ctx context.Context, uid int64) (User, error) {
+	var res User
+	err := g.db.WithContext(ctx).Where("id = ?", uid).First(&res).Error
+	return res, err
 }

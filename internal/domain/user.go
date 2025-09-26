@@ -7,6 +7,7 @@ type User struct {
 	Email      string
 	Password   string
 	Nickname   string
+	Avatar     string    // 头像
 	Birthday   time.Time // YYYY-MM-DD
 	AboutMe    string
 	Phone      string

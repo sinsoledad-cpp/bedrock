@@ -46,6 +46,8 @@ func (u *UserHandler) RegisterRoutes(e *gin.Engine) {
 	g.POST("/login", ginx.WrapBody(u.LoginJWT))
 	g.POST("/logout", ginx.Wrap(u.LogoutJWT))
 	g.POST("/refresh_token", ginx.Wrap(u.RefreshToken))
+
+	g.POST("/avatar/upload", ginx.WrapClaims(u.UploadAvatar))
 }
 func (u *UserHandler) Ping(ctx *gin.Context) {
 	ctx.String(http.StatusOK, "ping pong")
@@ -200,12 +202,40 @@ func (u *UserHandler) RefreshToken(ctx *gin.Context) (ginx.Result, error) {
 	err = u.jwtware.SetJWTToken(ctx, rc.Uid, rc.Ssid)
 	if err != nil {
 		return ginx.Result{
-			Code: http.StatusUnauthorized,
+			Code: errs.UserInternalServerError,
 			Msg:  "系统内部错误",
 		}, err
 	}
 	return ginx.Result{
 		Code: http.StatusOK,
 		Msg:  "刷新成功",
+	}, nil
+}
+
+func (u *UserHandler) UploadAvatar(ctx *gin.Context, uc jwtware.UserClaims) (ginx.Result, error) {
+	file, err := ctx.FormFile("avatar") // 前端表单字段名应为 'avatar'  multipart/form-data
+	if err != nil {
+		return ginx.Result{
+			Code: errs.UserInvalidInput,
+			Msg:  "请上传头像文件",
+		}, err
+	}
+
+	// 调用 service 层处理业务逻辑
+	avatarPath, err := u.userSvc.UploadAvatar(ctx.Request.Context(), uc.Uid, file)
+	if err != nil {
+		u.log.Error("头像上传失败", logger.Error(err))
+		return ginx.Result{
+			Code: http.StatusInternalServerError,
+			Msg:  "系统错误",
+		}, err
+	}
+
+	return ginx.Result{
+		Code: http.StatusOK,
+		Msg:  "头像上传成功",
+		Data: gin.H{
+			"avatar_url": avatarPath, // 返回头像路径
+		},
 	}, nil
 }
