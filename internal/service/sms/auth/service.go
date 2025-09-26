@@ -6,13 +6,15 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 )
 
-type SMSService struct {
+var _ sms.Service = &Service{}
+
+type Service struct {
 	svc sms.Service
 	key []byte //用于验证 JWT 签名的密钥
 }
 
-func NewSMSService(svc sms.Service, key []byte) sms.Service {
-	return &SMSService{
+func NewService(svc sms.Service, key []byte) sms.Service {
+	return &Service{
 		svc: svc,
 		key: key,
 	}
@@ -24,7 +26,7 @@ type SMSClaims struct {
 	// 额外加字段
 }
 
-func (s *SMSService) Send(ctx context.Context, tplToken string, args []string, numbers ...string) error {
+func (s *Service) Send(ctx context.Context, tplToken string, args []string, numbers ...string) error {
 	var claims SMSClaims
 	_, err := jwt.ParseWithClaims(tplToken, &claims, func(token *jwt.Token) (interface{}, error) {
 		return s.key, nil

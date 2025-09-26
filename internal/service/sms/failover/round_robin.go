@@ -7,6 +7,8 @@ import (
 	"sync/atomic"
 )
 
+var _ sms.Service = &RoundRobinService{}
+
 type RoundRobinService struct {
 	providers []sms.Service
 	// v1 的字段
@@ -14,7 +16,7 @@ type RoundRobinService struct {
 	idx uint64
 }
 
-func NewFailOverSMSService(providers []sms.Service) *RoundRobinService {
+func NewFailOverSMSService(providers []sms.Service) sms.Service {
 	return &RoundRobinService{
 		providers: providers,
 	}

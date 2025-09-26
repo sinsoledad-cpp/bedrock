@@ -7,6 +7,8 @@ import (
 	"sync/atomic"
 )
 
+var _ sms.Service = &TimeoutService{}
+
 type TimeoutService struct {
 	providers []sms.Service
 	idx       int32 // 当前正在使用节点
@@ -14,7 +16,7 @@ type TimeoutService struct {
 	threshold int32 // 切换的阈值，只读的
 }
 
-func NewTimeoutService(providers []sms.Service, threshold int32) *TimeoutService {
+func NewTimeoutService(providers []sms.Service, threshold int32) sms.Service {
 	return &TimeoutService{
 		providers: providers,
 		threshold: threshold,

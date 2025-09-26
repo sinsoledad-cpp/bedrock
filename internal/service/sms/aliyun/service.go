@@ -10,6 +10,8 @@ import (
 	"strings"
 )
 
+var _ sms.Service = &Service{}
+
 type Service struct {
 	client   *dysmsapi.Client
 	signName string

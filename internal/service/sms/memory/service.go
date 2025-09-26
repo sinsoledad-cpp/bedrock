@@ -6,6 +6,8 @@ import (
 	"fmt"
 )
 
+var _ sms.Service = &Service{}
+
 type Service struct {
 }
 

@@ -9,6 +9,8 @@ import (
 	tencentsms "github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/sms/v20210111"
 )
 
+var _ sms.Service = &Service{}
+
 type Service struct {
 	client   *tencentsms.Client
 	appID    *string
