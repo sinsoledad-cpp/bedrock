@@ -31,9 +31,10 @@ type User struct {
 }
 
 var (
-	ErrDuplicateEmail = errors.New("邮箱冲突")
-	ErrDuplicatePhone = errors.New("手机号冲突")
-	ErrRecordNotFound = gorm.ErrRecordNotFound
+	ErrDuplicateEmail  = errors.New("邮箱冲突")
+	ErrDuplicatePhone  = errors.New("手机号冲突")
+	ErrDuplicateWechat = errors.New("微信冲突")
+	ErrRecordNotFound  = gorm.ErrRecordNotFound
 )
 
 type UserDAO interface {
@@ -43,7 +44,7 @@ type UserDAO interface {
 	UpdateById(ctx context.Context, entity User) error
 	FindById(ctx context.Context, uid int64) (User, error)
 	FindByPhone(ctx context.Context, phone string) (User, error)
-	//FindByWechat(ctx context.Context, openId string) (User, error)
+	FindByWechat(ctx context.Context, openId string) (User, error)
 }
 
 type GORMUserDAO struct {
@@ -72,7 +73,9 @@ func (g *GORMUserDAO) Insert(ctx context.Context, user User) error {
 			if strings.Contains(e.Message, "phone") {
 				return ErrDuplicatePhone
 			}
-
+			if strings.Contains(e.Message, "wechat_open_id") {
+				return ErrDuplicateWechat
+			}
 			return ErrDuplicateEmail
 		}
 
@@ -115,4 +118,10 @@ func (g *GORMUserDAO) FindByPhone(ctx context.Context, phone string) (User, erro
 	var res User
 	err := g.db.WithContext(ctx).Where("phone = ?", phone).First(&res).Error
 	return res, err
+}
+
+func (g *GORMUserDAO) FindByWechat(ctx context.Context, openID string) (User, error) {
+	var u User
+	err := g.db.WithContext(ctx).Where("wechat_open_id=?", openID).First(&u).Error
+	return u, err
 }

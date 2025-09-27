@@ -11,9 +11,10 @@ import (
 )
 
 var (
-	ErrDuplicateUserPhone = dao.ErrDuplicatePhone
-	ErrDuplicateUserEmail = dao.ErrDuplicateEmail
-	ErrUserNotFound       = dao.ErrRecordNotFound
+	ErrDuplicatePhone  = dao.ErrDuplicatePhone
+	ErrDuplicateEmail  = dao.ErrDuplicateEmail
+	ErrDuplicateWechat = dao.ErrDuplicateWechat
+	ErrUserNotFound    = dao.ErrRecordNotFound
 )
 
 type UserRepository interface {
@@ -24,7 +25,7 @@ type UserRepository interface {
 	FindByPhone(ctx context.Context, phone string) (domain.User, error)
 
 	FindById(ctx context.Context, uID int64) (domain.User, error)
-	//FindByWechat(ctx context.Context, openID string) (domain.User, error)
+	FindByWechat(ctx context.Context, openID string) (domain.User, error)
 }
 
 type CachedUserRepository struct {
@@ -108,6 +109,14 @@ func (c *CachedUserRepository) FindById(ctx context.Context, uid int64) (domain.
 		return domain.User{}, err
 	}
 }
+func (c *CachedUserRepository) FindByWechat(ctx context.Context, openID string) (domain.User, error) {
+	ue, err := c.dao.FindByWechat(ctx, openID)
+	if err != nil {
+		return domain.User{}, err
+	}
+	return c.toDomain(ue), nil
+}
+
 func (c *CachedUserRepository) toEntity(user domain.User) dao.User {
 	return dao.User{
 		ID: user.ID,

@@ -15,7 +15,7 @@ import (
 )
 
 var (
-	ErrDuplicateEmail        = repository.ErrDuplicateUserEmail
+	ErrDuplicateEmail        = repository.ErrDuplicateEmail
 	ErrInvalidUserOrPassword = errors.New("用户不存在或者密码不对")
 )
 
@@ -27,7 +27,7 @@ type UserService interface {
 	UpdateNonSensitiveInfo(ctx context.Context, user domain.User) error
 	FindById(ctx context.Context, uid int64) (domain.User, error)
 	FindOrCreate(ctx context.Context, phone string) (domain.User, error)
-	//FindOrCreateByWechat(ctx context.Context, wechatInfo domain.WechatInfo) (domain.User, error)
+	FindOrCreateByWechat(ctx context.Context, wechatInfo domain.WechatInfo) (domain.User, error)
 }
 type DefaultUserService struct {
 	l    logger.Logger
@@ -155,10 +155,27 @@ func (svc *DefaultUserService) FindOrCreate(ctx context.Context, phone string) (
 	})
 	// 有两种可能，一种是 err 恰好是唯一索引冲突（phone）
 	// 一种是 err != nil，系统错误
-	if err != nil && !errors.Is(err, repository.ErrDuplicateUserPhone) {
+	if err != nil && !errors.Is(err, repository.ErrDuplicatePhone) {
 		return domain.User{}, err
 	}
 	// 要么 err ==nil，要么ErrDuplicateUser，也代表用户存在
 	// 主从延迟，理论上来讲，强制走主库
 	return svc.repo.FindByPhone(ctx, phone)
+}
+func (svc *DefaultUserService) FindOrCreateByWechat(ctx context.Context, wechatInfo domain.WechatInfo) (domain.User, error) {
+	u, err := svc.repo.FindByWechat(ctx, wechatInfo.OpenID)
+	if !errors.Is(err, repository.ErrUserNotFound) {
+		return u, err
+	}
+	// 这边就是意味着是一个新用户
+	// JSON 格式的 wechatInfo
+	//zap.L().Info("新用户", zap.Any("wechatInfo", wechatInfo))
+	//svc.logger.Info("新用户", zap.Any("wechatInfo", wechatInfo))
+	err = svc.repo.Create(ctx, domain.User{
+		WechatInfo: wechatInfo,
+	})
+	if err != nil && !errors.Is(err, repository.ErrDuplicateWechat) {
+		return domain.User{}, err
+	}
+	return svc.repo.FindByWechat(ctx, wechatInfo.OpenID)
 }
