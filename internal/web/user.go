@@ -32,10 +32,12 @@ type UserHandler struct {
 	passwordRegexExp *regexp.Regexp
 }
 
-func NewUserHandler(log logger.Logger, userSvc service.UserService) *UserHandler {
+func NewUserHandler(log logger.Logger, userSvc service.UserService, codeSvc service.CodeService, jwtware jwtware.Handler) *UserHandler {
 	return &UserHandler{
 		log:              log,
 		userSvc:          userSvc,
+		codeSvc:          codeSvc,
+		jwtware:          jwtware,
 		emailRegexExp:    regexp.MustCompile(emailRegexPattern, regexp.None),
 		passwordRegexExp: regexp.MustCompile(passwordRegexPattern, regexp.None),
 	}

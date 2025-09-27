@@ -12,6 +12,7 @@ import (
 	"bedrock/internal/repository/dao"
 	"bedrock/internal/service"
 	"bedrock/internal/web"
+	"bedrock/internal/web/middleware/jwt"
 	"bedrock/ioc"
 	"github.com/google/wire"
 )
@@ -26,7 +27,12 @@ func InitApp() *App {
 	userCache := cache.NewRedisUserCache(cmdable)
 	userRepository := repository.NewCachedUserRepository(userDAO, userCache)
 	userService := service.NewUserService(logger, userRepository)
-	userHandler := web.NewUserHandler(logger, userService)
+	codeCache := cache.NewRedisCodeCache(cmdable)
+	codeRepository := repository.NewCachedCodeRepository(codeCache)
+	smsService := ioc.InitSMSService()
+	codeService := service.NewCodeService(codeRepository, smsService)
+	handler := jwt.NewRedisJWTHandler(cmdable)
+	userHandler := web.NewUserHandler(logger, userService, codeService, handler)
 	engine := ioc.InitWebEngine(userHandler)
 	app := &App{
 		engine: engine,
@@ -38,4 +44,6 @@ func InitApp() *App {
 
 var thirdParty = wire.NewSet(ioc.InitLogger, ioc.InitMySQL, ioc.InitRedis)
 
-var userHdl = wire.NewSet(cache.NewRedisUserCache, dao.NewGORMUserDAO, repository.NewCachedUserRepository, service.NewUserService, web.NewUserHandler)
+var userSvc = wire.NewSet(cache.NewRedisUserCache, dao.NewGORMUserDAO, repository.NewCachedUserRepository, service.NewUserService)
+
+var codeSvc = wire.NewSet(cache.NewRedisCodeCache, repository.NewCachedCodeRepository, ioc.InitSMSService, service.NewCodeService)
