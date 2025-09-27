@@ -20,7 +20,7 @@ func InitViper() {
 	if err != nil {
 		panic(err)
 	}
-	println("配置文件读取成功", viper.ConfigFileUsed())
+	fmt.Println("配置文件读取成功", viper.ConfigFileUsed())
 
 	// --- 开始打印配置 ---
 
