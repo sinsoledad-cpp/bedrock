@@ -3,7 +3,9 @@ package web
 import (
 	"bedrock/internal/service"
 	"bedrock/internal/service/oauth2/wechat"
+	"bedrock/internal/web/errs"
 	"bedrock/pkg/ginx"
+	"bedrock/pkg/logger"
 	"fmt"
 
 	jwtware "bedrock/internal/web/middleware/jwt"
@@ -20,11 +22,12 @@ type StateClaims struct {
 }
 
 type OAuth2WechatHandler struct {
-	wechatSvc wechat.Service
-	userSvc   service.UserService
-	jwtware.Handler
+	wechatSvc       wechat.Service
+	userSvc         service.UserService
+	jwtHdl          jwtware.Handler
 	key             []byte
 	stateCookieName string
+	l               logger.Logger
 }
 
 func NewOAuth2WechatHandler(svc wechat.Service,
@@ -35,75 +38,79 @@ func NewOAuth2WechatHandler(svc wechat.Service,
 		userSvc:         userSvc,
 		key:             []byte("k6CswdUm77WKcbM68UQUuxVsHSpTCwgB"),
 		stateCookieName: "jwt-state",
-		Handler:         hdl,
+		jwtHdl:          hdl,
 	}
 }
 
 func (o *OAuth2WechatHandler) RegisterRoutes(server *gin.Engine) {
 	g := server.Group("/oauth2/wechat")
-	g.GET("/authurl", o.Auth2URL)
-	g.Any("/callback", o.Callback)
+	g.GET("/authurl", ginx.Wrap(o.Auth2URL))
+	g.Any("/callback", ginx.Wrap(o.Callback))
 }
 
-func (o *OAuth2WechatHandler) Auth2URL(ctx *gin.Context) {
+func (o *OAuth2WechatHandler) Auth2URL(ctx *gin.Context) (ginx.Result, error) {
 	state := uuid.New()
 	val, err := o.wechatSvc.AuthURL(ctx, state)
 	if err != nil {
-		ctx.JSON(http.StatusOK, ginx.Result{
-			Msg:  "构造跳转URL失败",
-			Code: 5,
-		})
-		return
+		o.l.Error("获取微信授权码失败", logger.Error(err))
+		return ginx.Result{
+			Code: errs.UserInternalServerError,
+			Msg:  "服务器异常",
+		}, err
 	}
 	err = o.setStateCookie(ctx, state)
 	if err != nil {
-		ctx.JSON(http.StatusOK, ginx.Result{
+		o.l.Error("设置 state cookie 失败", logger.Error(err))
+		return ginx.Result{
+			Code: errs.UserInternalServerError,
 			Msg:  "服务器异常",
-			Code: 5,
-		})
+		}, err
 	}
-	ctx.JSON(http.StatusOK, ginx.Result{
+	return ginx.Result{
+		Code: http.StatusOK,
+		Msg:  "OK",
 		Data: val,
-	})
+	}, nil
+
 }
 
-func (o *OAuth2WechatHandler) Callback(ctx *gin.Context) {
+func (o *OAuth2WechatHandler) Callback(ctx *gin.Context) (ginx.Result, error) {
 	err := o.verifyState(ctx)
 	if err != nil {
-		ctx.JSON(http.StatusOK, ginx.Result{
+		return ginx.Result{
+			Code: errs.UserInvalidInput,
 			Msg:  "非法请求",
-			Code: 4,
-		})
-		return
+		}, err
 	}
 	// 你校验不校验都可以
 	code := ctx.Query("code")
 	// state := ctx.Query("state")
 	wechatInfo, err := o.wechatSvc.VerifyCode(ctx, code)
 	if err != nil {
-		ctx.JSON(http.StatusOK, ginx.Result{
+		return ginx.Result{
+			Code: errs.UserInvalidInput,
 			Msg:  "授权码有误",
-			Code: 4,
-		})
-		return
+		}, err
 	}
 	u, err := o.userSvc.FindOrCreateByWechat(ctx, wechatInfo)
 	if err != nil {
-		ctx.JSON(http.StatusOK, ginx.Result{
+		return ginx.Result{
+			Code: errs.UserInternalServerError,
 			Msg:  "系统错误",
-			Code: 5,
-		})
-		return
+		}, err
 	}
-	err = o.SetLoginToken(ctx, u.ID)
+	err = o.jwtHdl.SetLoginToken(ctx, u.ID)
 	if err != nil {
-		ctx.String(http.StatusOK, "系统错误")
-		return
+		return ginx.Result{
+			Code: errs.UserInternalServerError,
+			Msg:  "系统错误",
+		}, err
 	}
-	ctx.JSON(http.StatusOK, ginx.Result{
-		Msg: "OK",
-	})
-	return
+
+	return ginx.Result{
+		Code: http.StatusOK,
+		Msg:  "微信授权成功",
+	}, nil
 }
 
 func (o *OAuth2WechatHandler) setStateCookie(ctx *gin.Context,

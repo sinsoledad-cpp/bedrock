@@ -27,17 +27,17 @@ type UserHandler struct {
 	log              logger.Logger
 	userSvc          service.UserService
 	codeSvc          service.CodeService
-	jwtware          jwtware.Handler
+	jwtHdl           jwtware.Handler
 	emailRegexExp    *regexp.Regexp
 	passwordRegexExp *regexp.Regexp
 }
 
-func NewUserHandler(log logger.Logger, userSvc service.UserService, codeSvc service.CodeService, jwtware jwtware.Handler) *UserHandler {
+func NewUserHandler(log logger.Logger, userSvc service.UserService, codeSvc service.CodeService, jwtHdl jwtware.Handler) *UserHandler {
 	return &UserHandler{
 		log:              log,
 		userSvc:          userSvc,
 		codeSvc:          codeSvc,
-		jwtware:          jwtware,
+		jwtHdl:           jwtHdl,
 		emailRegexExp:    regexp.MustCompile(emailRegexPattern, regexp.None),
 		passwordRegexExp: regexp.MustCompile(passwordRegexPattern, regexp.None),
 	}
@@ -130,7 +130,7 @@ func (u *UserHandler) LoginJWT(ctx *gin.Context, req LoginJWTReq) (ginx.Result, 
 	user, err := u.userSvc.Login(ctx, req.Email, req.Password)
 	switch {
 	case err == nil:
-		err = u.jwtware.SetLoginToken(ctx, user.ID)
+		err = u.jwtHdl.SetLoginToken(ctx, user.ID)
 		if err != nil {
 			return ginx.Result{
 				Code: errs.UserInternalServerError,
@@ -155,7 +155,7 @@ func (u *UserHandler) LoginJWT(ctx *gin.Context, req LoginJWTReq) (ginx.Result, 
 }
 
 func (u *UserHandler) LogoutJWT(ctx *gin.Context) (ginx.Result, error) {
-	err := u.jwtware.ClearToken(ctx)
+	err := u.jwtHdl.ClearToken(ctx)
 	if err != nil {
 		ctx.JSON(http.StatusOK, ginx.Result{Code: http.StatusInternalServerError, Msg: "系统错误"})
 		return ginx.Result{
@@ -186,7 +186,7 @@ func (u *UserHandler) RefreshToken(ctx *gin.Context) (ginx.Result, error) {
 	}
 
 	// 校验 ssid
-	err = u.jwtware.CheckSession(ctx, rc.Ssid)
+	err = u.jwtHdl.CheckSession(ctx, rc.Ssid)
 	if err != nil {
 		// 如果是会话不存在的业务错误，返回 401
 		if errors.Is(err, jwtware.ErrSessionNotFound) {
@@ -205,7 +205,7 @@ func (u *UserHandler) RefreshToken(ctx *gin.Context) (ginx.Result, error) {
 		}, err
 	}
 
-	err = u.jwtware.SetJWTToken(ctx, rc.Uid, rc.Ssid)
+	err = u.jwtHdl.SetJWTToken(ctx, rc.Uid, rc.Ssid)
 	if err != nil {
 		return ginx.Result{
 			Code: errs.UserInternalServerError,
@@ -372,7 +372,7 @@ func (u *UserHandler) LoginSMS(ctx *gin.Context,
 			Msg:  "系统错误",
 		}, err
 	}
-	err = u.jwtware.SetLoginToken(ctx, user.ID)
+	err = u.jwtHdl.SetLoginToken(ctx, user.ID)
 	if err != nil {
 		return ginx.Result{
 			Code: 5,
