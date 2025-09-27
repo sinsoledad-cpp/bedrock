@@ -33,7 +33,7 @@ func InitApp() *App {
 	codeService := service.NewCodeService(codeRepository, smsService)
 	handler := jwt.NewRedisJWTHandler(cmdable)
 	userHandler := web.NewUserHandler(logger, userService, codeService, handler)
-	engine := ioc.InitWebEngine(userHandler)
+	engine := ioc.InitWebEngine(logger, userHandler)
 	app := &App{
 		engine: engine,
 	}

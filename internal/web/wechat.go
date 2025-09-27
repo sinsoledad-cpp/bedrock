@@ -30,9 +30,7 @@ type OAuth2WechatHandler struct {
 	l               logger.Logger
 }
 
-func NewOAuth2WechatHandler(svc wechat.Service,
-	hdl jwtware.Handler,
-	userSvc service.UserService) *OAuth2WechatHandler {
+func NewOAuth2WechatHandler(svc wechat.Service, hdl jwtware.Handler, userSvc service.UserService) *OAuth2WechatHandler {
 	return &OAuth2WechatHandler{
 		wechatSvc:       svc,
 		userSvc:         userSvc,

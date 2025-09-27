@@ -33,14 +33,21 @@ var codeSvc = wire.NewSet(
 	service.NewCodeService,
 )
 
+//var wechatSvc = wire.NewSet(
+//	ioc.InitWechatService,
+//)
+
 func InitApp() *App {
 	wire.Build(
 		thirdParty,
+
 		userSvc,
 		codeSvc,
+		//wechatSvc,
 
 		jwt.NewRedisJWTHandler,
 		web.NewUserHandler,
+		//web.NewOAuth2WechatHandler,
 
 		ioc.InitWebEngine,
 		wire.Struct(new(App), "*"),
