@@ -15,7 +15,7 @@ import (
 )
 
 var (
-	ErrDuplicateEmail        = repository.ErrDuplicateUser
+	ErrDuplicateEmail        = repository.ErrDuplicateUserEmail
 	ErrInvalidUserOrPassword = errors.New("用户不存在或者密码不对")
 )
 
@@ -26,7 +26,7 @@ type UserService interface {
 	UploadAvatar(ctx context.Context, uid int64, file *multipart.FileHeader) (string, error)
 	UpdateNonSensitiveInfo(ctx context.Context, user domain.User) error
 	FindById(ctx context.Context, uid int64) (domain.User, error)
-	//FindOrCreate(ctx context.Context, phone string) (domain.User, error)
+	FindOrCreate(ctx context.Context, phone string) (domain.User, error)
 	//FindOrCreateByWechat(ctx context.Context, wechatInfo domain.WechatInfo) (domain.User, error)
 }
 type DefaultUserService struct {
@@ -139,4 +139,26 @@ func (svc *DefaultUserService) UpdateNonSensitiveInfo(ctx context.Context, user 
 }
 func (svc *DefaultUserService) FindById(ctx context.Context, uid int64) (domain.User, error) {
 	return svc.repo.FindById(ctx, uid)
+}
+func (svc *DefaultUserService) FindOrCreate(ctx context.Context, phone string) (domain.User, error) {
+	// 先找一下，我们认为，大部分用户是已经存在的用户
+	u, err := svc.repo.FindByPhone(ctx, phone)
+	if !errors.Is(err, repository.ErrUserNotFound) {
+		// 有两种情况
+		// err == nil, u 是可用的
+		// err != nil，系统错误，
+		return u, err
+	}
+	// 用户没找到
+	err = svc.repo.Create(ctx, domain.User{
+		Phone: phone,
+	})
+	// 有两种可能，一种是 err 恰好是唯一索引冲突（phone）
+	// 一种是 err != nil，系统错误
+	if err != nil && !errors.Is(err, repository.ErrDuplicateUserPhone) {
+		return domain.User{}, err
+	}
+	// 要么 err ==nil，要么ErrDuplicateUser，也代表用户存在
+	// 主从延迟，理论上来讲，强制走主库
+	return svc.repo.FindByPhone(ctx, phone)
 }

@@ -42,7 +42,7 @@ type UserDAO interface {
 	UpdateAvatar(ctx context.Context, id int64, avatar string) error
 	UpdateById(ctx context.Context, entity User) error
 	FindById(ctx context.Context, uid int64) (User, error)
-	//FindByPhone(ctx context.Context, phone string) (User, error)
+	FindByPhone(ctx context.Context, phone string) (User, error)
 	//FindByWechat(ctx context.Context, openId string) (User, error)
 }
 
@@ -108,5 +108,11 @@ func (g *GORMUserDAO) UpdateById(ctx context.Context, user User) error {
 func (g *GORMUserDAO) FindById(ctx context.Context, uid int64) (User, error) {
 	var res User
 	err := g.db.WithContext(ctx).Where("id = ?", uid).First(&res).Error
+	return res, err
+}
+
+func (g *GORMUserDAO) FindByPhone(ctx context.Context, phone string) (User, error) {
+	var res User
+	err := g.db.WithContext(ctx).Where("phone = ?", phone).First(&res).Error
 	return res, err
 }

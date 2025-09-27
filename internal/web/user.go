@@ -26,6 +26,7 @@ const (
 type UserHandler struct {
 	log              logger.Logger
 	userSvc          service.UserService
+	codeSvc          service.CodeService
 	jwtware          jwtware.Handler
 	emailRegexExp    *regexp.Regexp
 	passwordRegexExp *regexp.Regexp
@@ -42,7 +43,7 @@ func NewUserHandler(log logger.Logger, userSvc service.UserService) *UserHandler
 
 func (u *UserHandler) RegisterRoutes(e *gin.Engine) {
 	g := e.Group("/user")
-	g.POST("/ping", u.Ping)
+
 	g.POST("/signup", ginx.WrapBody(u.SignUp))
 	g.POST("/login", ginx.WrapBody(u.LoginJWT))
 	g.POST("/logout", ginx.Wrap(u.LogoutJWT))
@@ -50,10 +51,10 @@ func (u *UserHandler) RegisterRoutes(e *gin.Engine) {
 
 	g.POST("/avatar/upload", ginx.WrapClaims(u.UploadAvatar))
 	g.POST("/edit", ginx.WrapBodyAndClaims(u.Edit))
+	g.GET("/profile", ginx.WrapClaims(u.Profile))
 
-}
-func (u *UserHandler) Ping(ctx *gin.Context) {
-	ctx.String(http.StatusOK, "ping pong")
+	g.POST("/login_sms/code/send", ginx.WrapBody(u.SendSMSLoginCode))
+	g.POST("/login_sms", ginx.WrapBody(u.LoginSMS))
 }
 
 type SignUpReq struct {
@@ -304,5 +305,79 @@ func (u *UserHandler) Edit(ctx *gin.Context, req UserEditReq, uc jwtware.UserCla
 	return ginx.Result{
 		//Code: http.,
 		Msg: "OK",
+	}, nil
+}
+
+type SendSMSCodeReq struct {
+	Phone string `json:"phone"`
+}
+
+func (u *UserHandler) SendSMSLoginCode(ctx *gin.Context, req SendSMSCodeReq) (ginx.Result, error) {
+	// 你这边可以校验 Req
+	if req.Phone == "" {
+		return ginx.Result{
+			Code: errs.UserInvalidInput,
+			Msg:  "请输入手机号码",
+		}, nil
+	}
+	err := u.codeSvc.Send(ctx, bizLogin, req.Phone)
+	switch {
+	case err == nil:
+		return ginx.Result{
+			Msg: "发送成功",
+		}, nil
+	case errors.Is(err, service.ErrCodeSendTooMany):
+		// 事实上，防不住有人不知道怎么触发了
+		// 少数这种错误，是可以接受的
+		// 但是频繁出现，就代表有人在搞你的系统
+		return ginx.Result{
+			Code: errs.UserCodeSendTooMany,
+			Msg:  "短信发送太频繁，请稍后再试",
+		}, nil
+	default:
+		return ginx.Result{
+			Code: errs.UserInternalServerError,
+			Msg:  "系统错误",
+		}, err
+	}
+}
+
+type LoginSMSReq struct {
+	Phone string `json:"phone"`
+	Code  string `json:"code"`
+}
+
+func (u *UserHandler) LoginSMS(ctx *gin.Context,
+	req LoginSMSReq) (ginx.Result, error) {
+	ok, err := u.codeSvc.Verify(ctx, bizLogin, req.Phone, req.Code)
+	if err != nil {
+		return ginx.Result{
+			Code: 5,
+			Msg:  "系统异常",
+			//Msg: err.Error(),
+		}, err
+	}
+	if !ok {
+		return ginx.Result{
+			Code: 4,
+			Msg:  "验证码不对，请重新输入",
+		}, nil
+	}
+	user, err := u.userSvc.FindOrCreate(ctx, req.Phone)
+	if err != nil {
+		return ginx.Result{
+			Code: 5,
+			Msg:  "系统错误",
+		}, err
+	}
+	err = u.jwtware.SetLoginToken(ctx, user.ID)
+	if err != nil {
+		return ginx.Result{
+			Code: 5,
+			Msg:  "系统错误",
+		}, err
+	}
+	return ginx.Result{
+		Msg: "登录成功",
 	}, nil
 }

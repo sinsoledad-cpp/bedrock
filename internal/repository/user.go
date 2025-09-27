@@ -11,8 +11,9 @@ import (
 )
 
 var (
-	ErrDuplicateUser = dao.ErrDuplicateEmail
-	ErrUserNotFound  = dao.ErrRecordNotFound
+	ErrDuplicateUserPhone = dao.ErrDuplicatePhone
+	ErrDuplicateUserEmail = dao.ErrDuplicateEmail
+	ErrUserNotFound       = dao.ErrRecordNotFound
 )
 
 type UserRepository interface {
@@ -20,29 +21,29 @@ type UserRepository interface {
 	FindByEmail(ctx context.Context, email string) (domain.User, error)
 	UpdateAvatar(ctx context.Context, id int64, avatar string) error
 	UpdateNonZeroFields(ctx context.Context, user domain.User) error
-	//FindByPhone(ctx context.Context, phone string) (domain.User, error)
+	FindByPhone(ctx context.Context, phone string) (domain.User, error)
 
 	FindById(ctx context.Context, uID int64) (domain.User, error)
 	//FindByWechat(ctx context.Context, openID string) (domain.User, error)
 }
 
 type CachedUserRepository struct {
-	userDAO   dao.UserDAO
-	userCache cache.UserCache
+	dao   dao.UserDAO
+	cache cache.UserCache
 }
 
 func NewCachedUserRepository(userDAO dao.UserDAO, userCache cache.UserCache) UserRepository {
 	return &CachedUserRepository{
-		userDAO:   userDAO,
-		userCache: userCache,
+		dao:   userDAO,
+		cache: userCache,
 	}
 }
 
 func (c *CachedUserRepository) Create(ctx context.Context, user domain.User) error {
-	return c.userDAO.Insert(ctx, c.toEntity(user))
+	return c.dao.Insert(ctx, c.toEntity(user))
 }
 func (c *CachedUserRepository) FindByEmail(ctx context.Context, email string) (domain.User, error) {
-	u, err := c.userDAO.FindByEmail(ctx, email)
+	u, err := c.dao.FindByEmail(ctx, email)
 	if err != nil {
 		return domain.User{}, err
 	}
@@ -51,35 +52,42 @@ func (c *CachedUserRepository) FindByEmail(ctx context.Context, email string) (d
 
 func (c *CachedUserRepository) UpdateAvatar(ctx context.Context, id int64, avatar string) error {
 	// 更新数据库
-	err := c.userDAO.UpdateAvatar(ctx, id, avatar)
+	err := c.dao.UpdateAvatar(ctx, id, avatar)
 	//if err != nil {
 	//	return err
 	//}
 	//// 操作缓存：这里选择直接删除缓存，让下一次查询重新加载
-	//return c.userCache.Delete(ctx, id)
+	//return c.cache.Delete(ctx, id)
 	return err
 }
 
 func (c *CachedUserRepository) UpdateNonZeroFields(ctx context.Context, user domain.User) error {
 	// 更新 DB 之后，删除
-	err := c.userDAO.UpdateById(ctx, c.toEntity(user))
+	err := c.dao.UpdateById(ctx, c.toEntity(user))
 	if err != nil {
 		return err
 	}
 	// 延迟一秒
 	time.AfterFunc(time.Second, func() {
-		_ = c.userCache.Delete(ctx, user.ID)
+		_ = c.cache.Delete(ctx, user.ID)
 	})
-	return c.userCache.Delete(ctx, user.ID)
+	return c.cache.Delete(ctx, user.ID)
+}
+func (c *CachedUserRepository) FindByPhone(ctx context.Context, phone string) (domain.User, error) {
+	u, err := c.dao.FindByPhone(ctx, phone)
+	if err != nil {
+		return domain.User{}, err
+	}
+	return c.toDomain(u), nil
 }
 
 func (c *CachedUserRepository) FindById(ctx context.Context, uid int64) (domain.User, error) {
-	du, err := c.userCache.Get(ctx, uid)
+	du, err := c.cache.Get(ctx, uid)
 	switch {
 	case err == nil: // 只要 err 为 nil，就返回
 		return du, nil
 	case errors.Is(err, cache.ErrKeyNotExist):
-		u, err := c.userDAO.FindById(ctx, uid)
+		u, err := c.dao.FindById(ctx, uid)
 		if err != nil {
 			return domain.User{}, err
 		}
@@ -90,7 +98,7 @@ func (c *CachedUserRepository) FindById(ctx context.Context, uid int64) (domain.
 		//		log.Println(err)
 		//	}
 		//}()
-		err = c.userCache.Set(ctx, du)
+		err = c.cache.Set(ctx, du)
 		if err != nil {
 			// 网络崩了，也可能是 redis 崩了
 		}
