@@ -54,15 +54,15 @@ func (o *OAuth2WechatHandler) Auth2URL(ctx *gin.Context) (ginx.Result, error) {
 	if err != nil {
 		o.l.Error("获取微信授权码失败", logger.Error(err))
 		return ginx.Result{
-			Code: errs.UserInternalServerError,
-			Msg:  "服务器异常",
+			Code: errs.WechatCodeGetDefeated,
+			Msg:  "获取微信授权码失败",
 		}, err
 	}
 	err = o.setStateCookie(ctx, state)
 	if err != nil {
 		o.l.Error("设置 state cookie 失败", logger.Error(err))
 		return ginx.Result{
-			Code: errs.UserInternalServerError,
+			Code: errs.WechatInternalServerError,
 			Msg:  "服务器异常",
 		}, err
 	}
@@ -78,7 +78,7 @@ func (o *OAuth2WechatHandler) Callback(ctx *gin.Context) (ginx.Result, error) {
 	err := o.verifyState(ctx)
 	if err != nil {
 		return ginx.Result{
-			Code: errs.UserInvalidInput,
+			Code: errs.WechatInvalidRequest,
 			Msg:  "非法请求",
 		}, err
 	}
@@ -88,21 +88,21 @@ func (o *OAuth2WechatHandler) Callback(ctx *gin.Context) (ginx.Result, error) {
 	wechatInfo, err := o.wechatSvc.VerifyCode(ctx, code)
 	if err != nil {
 		return ginx.Result{
-			Code: errs.UserInvalidInput,
+			Code: errs.WechatInvalidCode,
 			Msg:  "授权码有误",
 		}, err
 	}
 	u, err := o.userSvc.FindOrCreateByWechat(ctx, wechatInfo)
 	if err != nil {
 		return ginx.Result{
-			Code: errs.UserInternalServerError,
+			Code: errs.WechatInternalServerError,
 			Msg:  "系统错误",
 		}, err
 	}
 	err = o.jwtHdl.SetLoginToken(ctx, u.ID)
 	if err != nil {
 		return ginx.Result{
-			Code: errs.UserInternalServerError,
+			Code: errs.WechatInternalServerError,
 			Msg:  "系统错误",
 		}, err
 	}
