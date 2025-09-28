@@ -2,8 +2,10 @@
   <dictionary name="project">
     <words>
       <w>jwtware</w>
+      <w>mapstructure</w>
       <w>rcjwt</w>
       <w>segs</w>
+      <w>zapcore</w>
     </words>
   </dictionary>
 </component>

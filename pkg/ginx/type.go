@@ -3,5 +3,5 @@ package ginx
 type Result struct {
 	Code int    `json:"code"`
 	Msg  string `json:"msg"`
-	Data any    `json:"data"`
+	Data any    `json:"data,omitempty"`
 }

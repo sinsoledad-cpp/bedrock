@@ -129,7 +129,10 @@ func (c *CachedUserRepository) toEntity(user domain.User) dao.User {
 			Valid:  user.Phone != "",
 		},
 		Password: user.Password,
-		Birthday: user.Birthday.UnixMilli(),
+		Birthday: sql.NullInt64{
+			Int64: user.Birthday.UnixMilli(),
+			Valid: !user.Birthday.IsZero(), // 表示这个值是有效的，不是 NULL
+		},
 		WechatUnionId: sql.NullString{
 			String: user.WechatInfo.UnionID,
 			Valid:  user.WechatInfo.UnionID != "",
@@ -143,6 +146,11 @@ func (c *CachedUserRepository) toEntity(user domain.User) dao.User {
 	}
 }
 func (c *CachedUserRepository) toDomain(u dao.User) domain.User {
+	var birthday time.Time
+	// 检查从数据库取出的 birthday 是否有效
+	if u.Birthday.Valid {
+		birthday = time.UnixMilli(u.Birthday.Int64)
+	}
 	return domain.User{
 		ID:       u.ID,
 		Email:    u.Email.String,
@@ -150,7 +158,7 @@ func (c *CachedUserRepository) toDomain(u dao.User) domain.User {
 		Password: u.Password,
 		AboutMe:  u.AboutMe,
 		Nickname: u.Nickname,
-		Birthday: time.UnixMilli(u.Birthday),
+		Birthday: birthday,
 		Ctime:    time.UnixMilli(u.Ctime),
 		WechatInfo: domain.WechatInfo{
 			OpenID:  u.WechatOpenId.String,

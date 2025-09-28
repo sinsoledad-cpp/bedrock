@@ -27,7 +27,7 @@ func InitLogger() logger.Logger {
 	//	panic(err)
 	//}
 
-	if err := Init("debug"); err != nil {
+	if err := InitZap("debug"); err != nil {
 		panic(err)
 	}
 

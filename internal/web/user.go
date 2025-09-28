@@ -75,6 +75,7 @@ func (u *UserHandler) SignUp(ctx *gin.Context, req SignUpReq) (ginx.Result, erro
 		}, err
 	}
 	if !isEmail {
+
 		return ginx.Result{
 			Code: errs.UserInvalidInput,
 			Msg:  "邮箱格式错误",
@@ -103,6 +104,7 @@ func (u *UserHandler) SignUp(ctx *gin.Context, req SignUpReq) (ginx.Result, erro
 	// 业务逻辑
 	err = u.userSvc.Signup(ctx.Request.Context(), domain.User{Email: req.Email, Password: req.ConfirmPassword})
 	if errors.Is(err, service.ErrDuplicateEmail) {
+		u.log.Warn("用户邮箱冲突", logger.Error(err))
 		return ginx.Result{
 			Code: errs.UserDuplicateEmail,
 			Msg:  "邮箱冲突",

@@ -15,7 +15,7 @@ type User struct {
 	Email    sql.NullString `gorm:"unique"` //Email    *string // 代表这是一个可以为 NULL 的列
 	Password string
 	Nickname string         `gorm:"type=varchar(128)"`
-	Birthday int64          // YYYY-MM-DD
+	Birthday sql.NullInt64  // YYYY-MM-DD
 	Avatar   string         `gorm:"type:varchar(1024)"` // 头像
 	AboutMe  string         `gorm:"type=varchar(4096)"`
 	Phone    sql.NullString `gorm:"unique"` // 代表这是一个可以为 NULL 的列

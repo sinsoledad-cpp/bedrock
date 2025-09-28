@@ -3,6 +3,7 @@ package ioc
 import (
 	"bedrock/internal/repository/dao"
 	"bedrock/pkg/logger"
+	"fmt"
 	"github.com/spf13/viper"
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
@@ -11,14 +12,13 @@ import (
 )
 
 func InitMySQL(l logger.Logger) *gorm.DB {
-	type Config struct {
+	type mysqlConfig struct {
 		DSN string `yaml:"dsn"`
 	}
-	var cfg Config = Config{
+	var cfg mysqlConfig = mysqlConfig{
 		DSN: "root:root@tcp(localhost:3306)/bedrock?charset=utf8mb4&parseTime=True&loc=Local",
 	}
-	err := viper.UnmarshalKey("mysql", &cfg)
-	if err != nil {
+	if err := viper.UnmarshalKey("mysql", &cfg); err != nil {
 		panic(err)
 	}
 	db, err := gorm.Open(mysql.Open(cfg.DSN),
@@ -33,9 +33,7 @@ func InitMySQL(l logger.Logger) *gorm.DB {
 	if err != nil {
 		panic(err)
 	}
-
-	err = dao.InitTables(db)
-	if err != nil {
+	if err = dao.InitTables(db); err != nil {
 		panic(err)
 	}
 	return db
@@ -44,8 +42,14 @@ func InitMySQL(l logger.Logger) *gorm.DB {
 type gormLoggerFunc func(msg string, fields ...logger.Field)
 
 func (g gormLoggerFunc) Printf(s string, i ...interface{}) {
-	g(s, logger.Field{Key: "args", Val: i})
+	msg := fmt.Sprintf(s, i...) // 手动格式化日志
+	g("GORM SQL日志：" + msg)      // 加个前缀
 }
+
+//func (g gormLoggerFunc) Printf(s string, i ...interface{}) {
+//	g(s, logger.Field{Key: "args", Val: i})
+//
+//}
 
 /*
 var database *gorm.DB
@@ -54,7 +58,7 @@ func Init(cfg *conf.MySQLConf) {
 	dsn := fmt.Sprintf("%s:%s@tcp(%s:%d)/%s?charset=utf8mb4&parseTime=True&loc=Local&timeout=%s",
 		cfg.User, cfg.Password, cfg.Host, cfg.Port, cfg.DBName, cfg.Timeout)
 	var err error
-	database, err = gorm.Open(mysql.Open(dsn), &gorm.Config{
+	database, err = gorm.Open(mysql.Open(dsn), &gorm.mysqlConfig{
 		SkipDefaultTransaction: true, // 禁用默认事务
 		NamingStrategy: schema.NamingStrategy{
 			SingularTable: false, // 禁用单数表名
