@@ -10,6 +10,8 @@ import (
 )
 
 var ErrCodeSendTooMany = repository.ErrCodeSendTooMany
+var ErrCodeVerifyTooMany = repository.ErrCodeVerifyTooMany
+var ErrCodeExpired = repository.ErrCodeExpired
 
 //go:generate mockgen -source=./code.go -package=svcmocks -destination=./mocks/code.mock.go CodeService
 type CodeService interface {
@@ -42,7 +44,7 @@ func (svc *DefaultCodeService) Send(ctx context.Context, biz, phone string) erro
 
 func (svc *DefaultCodeService) Verify(ctx context.Context, biz, phone, inputCode string) (bool, error) {
 	ok, err := svc.repo.Verify(ctx, biz, phone, inputCode)
-	if errors.Is(err, repository.ErrCodeVerifyTooMany) {
+	if errors.Is(err, repository.ErrCodeVerifyTooMany) || errors.Is(err, repository.ErrCodeExpired) {
 		// 相当于，我们对外面屏蔽了验证次数过多的错误，我们就是告诉调用者，你这个不对
 		return false, err
 	}

@@ -16,6 +16,7 @@ var (
 
 	ErrCodeSendTooMany   = errors.New("发送太频繁")
 	ErrCodeVerifyTooMany = errors.New("验证太频繁")
+	ErrCodeExpired       = errors.New("验证码已失效或不存在")
 )
 
 //go:generate mockgen -source=./code.go -package=cachemocks -destination=./mocks/code.mock.go CodeCache
@@ -58,11 +59,13 @@ func (c *RedisCodeCache) Verify(ctx context.Context, biz, phone, code string) (b
 		return false, err
 	}
 	switch res {
+	case -3: // <-- 新增 case
+		return false, ErrCodeExpired
 	case -2:
-		return false, nil
+		return false, nil // 验证码输错了，这不是一个系统错误
 	case -1:
 		return false, ErrCodeVerifyTooMany
-	default:
+	default: // 0 表示成功
 		return true, nil
 	}
 }

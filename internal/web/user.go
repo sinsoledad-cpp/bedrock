@@ -315,7 +315,7 @@ func (u *UserHandler) Edit(ctx *gin.Context, req UserEditReq, uc jwtware.UserCla
 }
 
 type SendSMSCodeReq struct {
-	Phone string `json:"phone"`
+	Phone string `json:"phone" binding:"required,len=11,numeric"`
 }
 
 func (u *UserHandler) SendSMSLoginCode(ctx *gin.Context, req SendSMSCodeReq) (ginx.Result, error) {
@@ -350,18 +350,30 @@ func (u *UserHandler) SendSMSLoginCode(ctx *gin.Context, req SendSMSCodeReq) (gi
 }
 
 type LoginSMSReq struct {
-	Phone string `json:"phone"`
-	Code  string `json:"code"`
+	Phone string `json:"phone" binding:"required,len=11,numeric"`
+	Code  string `json:"code" binding:"required,len=6,numeric"`
 }
 
 func (u *UserHandler) LoginSMS(ctx *gin.Context, req LoginSMSReq) (ginx.Result, error) {
 	ok, err := u.codeSvc.Verify(ctx, bizLogin, req.Phone, req.Code)
 	if err != nil {
-		return ginx.Result{
-			Code: errs.UserInternalServerError,
-			Msg:  "系统异常",
-			//Msg: err.Error(),
-		}, err
+		switch {
+		case errors.Is(err, service.ErrCodeVerifyTooMany):
+			return ginx.Result{
+				Code: errs.UserCodeVerifyTooMany,
+				Msg:  "验证码验证次数太多，请稍后再试",
+			}, nil
+		case errors.Is(err, service.ErrCodeExpired):
+			return ginx.Result{
+				Code: errs.UserCodeExpired,
+				Msg:  "验证码已过期",
+			}, nil
+		default:
+			return ginx.Result{
+				Code: errs.UserInternalServerError,
+				Msg:  "系统异常",
+			}, err
+		}
 	}
 	if !ok {
 		return ginx.Result{

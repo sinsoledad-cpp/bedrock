@@ -27,8 +27,12 @@ const (
 	UserCodeSendTooMany = 401005
 	// UserCodeInvalid 验证码错误
 	UserCodeInvalid = 401006
+	// UserCodeExpired 验证码过期
+	UserCodeExpired = 401007
+	// UserCodeVerifyTooMany 验证码错误次数过多
+	UserCodeVerifyTooMany = 401008
 	// UserSmsStateInvalid 登录短信状态错误
-	UserSmsStateInvalid = 401007
+	UserSmsStateInvalid = 401009
 	// UserSmsCodeInvalid 登录短信授权码错误
-	UserSmsCodeInvalid = 401008
+	UserSmsCodeInvalid = 401010
 )
