@@ -60,9 +60,9 @@ func (u *UserHandler) RegisterRoutes(e *gin.Engine) {
 }
 
 type SignUpReq struct {
-	Email           string `json:"email"`
-	Password        string `json:"password"`
-	ConfirmPassword string `json:"confirmPassword"`
+	Email           string `json:"email" binding:"required,email"`
+	Password        string `json:"password" binding:"required,min=8,max=32"`
+	ConfirmPassword string `json:"confirmPassword" binding:"required,eqfield=Password"`
 }
 
 func (u *UserHandler) SignUp(ctx *gin.Context, req SignUpReq) (ginx.Result, error) {
@@ -84,7 +84,7 @@ func (u *UserHandler) SignUp(ctx *gin.Context, req SignUpReq) (ginx.Result, erro
 	if req.Password != req.ConfirmPassword {
 		return ginx.Result{
 			Code: errs.UserInvalidInput,
-			Msg:  "两次输入密码不对",
+			Msg:  "两次输入密码不同",
 		}, nil
 	}
 	isPassword, err := u.passwordRegexExp.MatchString(req.Password)
