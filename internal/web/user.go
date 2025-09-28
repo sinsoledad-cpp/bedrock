@@ -330,7 +330,8 @@ func (u *UserHandler) SendSMSLoginCode(ctx *gin.Context, req SendSMSCodeReq) (gi
 	switch {
 	case err == nil:
 		return ginx.Result{
-			Msg: "发送成功",
+			Code: http.StatusOK,
+			Msg:  "发送成功",
 		}, nil
 	case errors.Is(err, service.ErrCodeSendTooMany):
 		// 事实上，防不住有人不知道怎么触发了
@@ -353,37 +354,37 @@ type LoginSMSReq struct {
 	Code  string `json:"code"`
 }
 
-func (u *UserHandler) LoginSMS(ctx *gin.Context,
-	req LoginSMSReq) (ginx.Result, error) {
+func (u *UserHandler) LoginSMS(ctx *gin.Context, req LoginSMSReq) (ginx.Result, error) {
 	ok, err := u.codeSvc.Verify(ctx, bizLogin, req.Phone, req.Code)
 	if err != nil {
 		return ginx.Result{
-			Code: 5,
+			Code: errs.UserInternalServerError,
 			Msg:  "系统异常",
 			//Msg: err.Error(),
 		}, err
 	}
 	if !ok {
 		return ginx.Result{
-			Code: 4,
+			Code: errs.UserCodeInvalid,
 			Msg:  "验证码不对，请重新输入",
 		}, nil
 	}
 	user, err := u.userSvc.FindOrCreate(ctx, req.Phone)
 	if err != nil {
 		return ginx.Result{
-			Code: 5,
+			Code: errs.UserInternalServerError,
 			Msg:  "系统错误",
 		}, err
 	}
 	err = u.jwtHdl.SetLoginToken(ctx, user.ID)
 	if err != nil {
 		return ginx.Result{
-			Code: 5,
+			Code: errs.UserInternalServerError,
 			Msg:  "系统错误",
 		}, err
 	}
 	return ginx.Result{
-		Msg: "登录成功",
+		Code: http.StatusOK,
+		Msg:  "登录成功",
 	}, nil
 }

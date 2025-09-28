@@ -29,6 +29,7 @@ type UserService interface {
 	FindOrCreate(ctx context.Context, phone string) (domain.User, error)
 	FindOrCreateByWechat(ctx context.Context, wechatInfo domain.WechatInfo) (domain.User, error)
 }
+
 type DefaultUserService struct {
 	l    logger.Logger
 	repo repository.UserRepository
@@ -49,6 +50,7 @@ func (svc *DefaultUserService) Signup(ctx context.Context, u domain.User) error 
 	u.Password = string(hash)
 	return svc.repo.Create(ctx, u)
 }
+
 func (svc *DefaultUserService) Login(ctx context.Context, email string, password string) (domain.User, error) {
 	u, err := svc.repo.FindByEmail(ctx, email)
 	if errors.Is(err, repository.ErrUserNotFound) {
@@ -143,13 +145,16 @@ func (svc *DefaultUserService) UploadAvatar(ctx context.Context, uid int64, file
 	// 6. 返回新文件的路径
 	return newPath, nil
 }
+
 func (svc *DefaultUserService) UpdateNonSensitiveInfo(ctx context.Context, user domain.User) error {
 	// UpdateNicknameAndXXAnd
 	return svc.repo.UpdateNonZeroFields(ctx, user)
 }
+
 func (svc *DefaultUserService) FindById(ctx context.Context, uid int64) (domain.User, error) {
 	return svc.repo.FindById(ctx, uid)
 }
+
 func (svc *DefaultUserService) FindOrCreate(ctx context.Context, phone string) (domain.User, error) {
 	// 先找一下，我们认为，大部分用户是已经存在的用户
 	u, err := svc.repo.FindByPhone(ctx, phone)
@@ -172,6 +177,7 @@ func (svc *DefaultUserService) FindOrCreate(ctx context.Context, phone string) (
 	// 主从延迟，理论上来讲，强制走主库
 	return svc.repo.FindByPhone(ctx, phone)
 }
+
 func (svc *DefaultUserService) FindOrCreateByWechat(ctx context.Context, wechatInfo domain.WechatInfo) (domain.User, error) {
 	u, err := svc.repo.FindByWechat(ctx, wechatInfo.OpenID)
 	if !errors.Is(err, repository.ErrUserNotFound) {

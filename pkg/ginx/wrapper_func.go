@@ -67,7 +67,6 @@ func WrapBodyAndClaims[Req any, Claims jwt.Claims](bizFn func(ctx *gin.Context, 
 
 func Wrap(bizFn func(ctx *gin.Context) (Result, error)) gin.HandlerFunc {
 	return func(ctx *gin.Context) {
-
 		res, err := bizFn(ctx)
 		if err != nil {
 			log.Error("执行业务逻辑失败", logger.Error(err))
