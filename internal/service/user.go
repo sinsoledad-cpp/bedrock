@@ -122,12 +122,22 @@ func (svc *DefaultUserService) UploadAvatar(ctx context.Context, uid int64, file
 	// 5. (新增) 数据库更新成功后，删除旧的头像文件
 	// 检查 oldAvatarPath 是否为空或默认值，避免删除默认头像
 	if oldAvatarPath != "" && oldAvatarPath != "path/to/default/avatar.png" {
-		// 删除旧文件失败是一个可以容忍的错误，不应该影响主流程的成功返回
-		// 但我们应该记录日志，方便后续手动清理或进行监控
-		if err := os.Remove(oldAvatarPath); err != nil {
-			// 在这里记录日志，但不要返回错误
-			svc.l.Warn("数据库更新成功,删除旧头像失败", logger.Error(err), logger.String("old_avatar_path", oldAvatarPath))
+		// 将旧的相对路径也转换为绝对路径
+		absOldPath, err := filepath.Abs(oldAvatarPath)
+		if err != nil {
+			svc.l.Warn("转换旧头像为绝对路径失败", logger.Error(err), logger.String("old_avatar_path", oldAvatarPath))
+		} else {
+			// 使用绝对路径进行删除
+			if err := os.Remove(absOldPath); err != nil {
+				svc.l.Warn("数据库更新成功,但删除旧头像失败", logger.Error(err), logger.String("old_avatar_path", absOldPath))
+			}
 		}
+		//// 删除旧文件失败是一个可以容忍的错误，不应该影响主流程的成功返回
+		//// 但我们应该记录日志，方便后续手动清理或进行监控
+		//if err := os.Remove(oldAvatarPath); err != nil {
+		//	// 在这里记录日志，但不要返回错误
+		//	svc.l.Warn("数据库更新成功,删除旧头像失败", logger.Error(err), logger.String("old_avatar_path", oldAvatarPath))
+		//}
 	}
 
 	// 6. 返回新文件的路径

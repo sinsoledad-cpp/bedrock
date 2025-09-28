@@ -1,7 +1,7 @@
 log:
   level: "debug"
   path: "./logs/bedlock.log"
-  max_size: 1000  # 日志最大 1000 M
+  max_size: 1  # 日志最大 1000 M
   max_age: 3600   # 日志保留天数
   max_backups: 5  # 最多保留 5 个备份文件
 

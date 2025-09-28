@@ -124,8 +124,8 @@ func (u *UserHandler) SignUp(ctx *gin.Context, req SignUpReq) (ginx.Result, erro
 }
 
 type LoginJWTReq struct {
-	Email    string `json:"email"`
-	Password string `json:"password"`
+	Email    string `json:"email" binding:"required,email"`
+	Password string `json:"password" binding:"required,min=8,max=32"`
 }
 
 func (u *UserHandler) LoginJWT(ctx *gin.Context, req LoginJWTReq) (ginx.Result, error) {
@@ -264,6 +264,8 @@ func (u *UserHandler) Profile(ctx *gin.Context, uc jwtware.UserClaims) (ginx.Res
 		Avatar   string `json:"avatar"`
 	}
 	return ginx.Result{
+		Code: http.StatusOK,
+		Msg:  "获取用户信息成功",
 		Data: User{
 			Nickname: user.Nickname,
 			Email:    user.Email,
@@ -290,7 +292,7 @@ func (u *UserHandler) Edit(ctx *gin.Context, req UserEditReq, uc jwtware.UserCla
 	birthday, err := time.Parse(time.DateOnly, req.Birthday)
 	if err != nil {
 		return ginx.Result{
-			Code: 4,
+			Code: errs.UserInvalidInput,
 			Msg:  "生日格式不对",
 		}, err
 	}
@@ -307,8 +309,8 @@ func (u *UserHandler) Edit(ctx *gin.Context, req UserEditReq, uc jwtware.UserCla
 		}, err
 	}
 	return ginx.Result{
-		//Code: http.,
-		Msg: "OK",
+		Code: http.StatusOK,
+		Msg:  "上传成功",
 	}, nil
 }
 

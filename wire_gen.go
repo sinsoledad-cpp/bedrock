@@ -20,10 +20,12 @@ import (
 // Injectors from wire.go:
 
 func InitApp() *App {
+	cmdable := ioc.InitRedis()
+	handler := jwt.NewRedisJWTHandler(cmdable)
+	v := ioc.InitGinMiddlewares(handler)
 	logger := ioc.InitLogger()
 	db := ioc.InitMySQL(logger)
 	userDAO := dao.NewGORMUserDAO(db)
-	cmdable := ioc.InitRedis()
 	userCache := cache.NewRedisUserCache(cmdable)
 	userRepository := repository.NewCachedUserRepository(userDAO, userCache)
 	userService := service.NewUserService(logger, userRepository)
@@ -31,9 +33,8 @@ func InitApp() *App {
 	codeRepository := repository.NewCachedCodeRepository(codeCache)
 	smsService := ioc.InitSMSService()
 	codeService := service.NewCodeService(codeRepository, smsService)
-	handler := jwt.NewRedisJWTHandler(cmdable)
 	userHandler := web.NewUserHandler(logger, userService, codeService, handler)
-	engine := ioc.InitWebEngine(logger, userHandler)
+	engine := ioc.InitWebEngine(v, logger, userHandler)
 	app := &App{
 		engine: engine,
 	}

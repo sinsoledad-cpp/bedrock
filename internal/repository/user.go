@@ -54,12 +54,11 @@ func (c *CachedUserRepository) FindByEmail(ctx context.Context, email string) (d
 func (c *CachedUserRepository) UpdateAvatar(ctx context.Context, id int64, avatar string) error {
 	// 更新数据库
 	err := c.dao.UpdateAvatar(ctx, id, avatar)
-	//if err != nil {
-	//	return err
-	//}
-	//// 操作缓存：这里选择直接删除缓存，让下一次查询重新加载
-	//return c.cache.Delete(ctx, id)
-	return err
+	if err != nil {
+		return err
+	}
+	// 操作缓存：这里选择直接删除缓存，让下一次查询重新加载
+	return c.cache.Delete(ctx, id)
 }
 
 func (c *CachedUserRepository) UpdateNonZeroFields(ctx context.Context, user domain.User) error {
@@ -133,6 +132,7 @@ func (c *CachedUserRepository) toEntity(user domain.User) dao.User {
 			Int64: user.Birthday.UnixMilli(),
 			Valid: !user.Birthday.IsZero(), // 表示这个值是有效的，不是 NULL
 		},
+		Avatar: user.Avatar,
 		WechatUnionId: sql.NullString{
 			String: user.WechatInfo.UnionID,
 			Valid:  user.WechatInfo.UnionID != "",
@@ -159,6 +159,7 @@ func (c *CachedUserRepository) toDomain(u dao.User) domain.User {
 		AboutMe:  u.AboutMe,
 		Nickname: u.Nickname,
 		Birthday: birthday,
+		Avatar:   u.Avatar,
 		Ctime:    time.UnixMilli(u.Ctime),
 		WechatInfo: domain.WechatInfo{
 			OpenID:  u.WechatOpenId.String,

@@ -50,6 +50,7 @@ func InitApp() *App {
 		//web.NewOAuth2WechatHandler,
 
 		ioc.InitWebEngine,
+		ioc.InitGinMiddlewares,
 		wire.Struct(new(App), "*"),
 	)
 	return new(App)
