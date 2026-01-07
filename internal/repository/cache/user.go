@@ -3,10 +3,11 @@ package cache
 import (
 	"bedrock/internal/domain"
 	"context"
-	"encoding/json"
 	"fmt"
-	"github.com/redis/go-redis/v9"
 	"time"
+
+	json "github.com/json-iterator/go"
+	"github.com/redis/go-redis/v9"
 )
 
 // ErrKeyNotExist 因为我们目前还是只有一个实现，所以可以保持用别名

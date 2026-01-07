@@ -63,7 +63,7 @@ bedrock/
 1. **克隆项目**
 ```bash
 git clone <repository-url>
-cd bedrock
+cd server
 ```
 
 2. **安装依赖**
@@ -92,8 +92,8 @@ vim configs/dev.yaml
 go run main.go
 
 # 或者构建后运行
-go build -o bedrock
-./bedrock
+go build -o server
+./server
 ```
 
 ### 配置文件示例
@@ -105,7 +105,7 @@ server:
 
 database:
   mysql:
-    dsn: "root:root@tcp(localhost:3306)/bedrock?charset=utf8mb4&parseTime=True&loc=Local"
+    dsn: "root:root@tcp(localhost:3306)/server?charset=utf8mb4&parseTime=True&loc=Local"
   redis:
     addr: "localhost:6379"
 

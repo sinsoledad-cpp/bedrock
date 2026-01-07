@@ -1,6 +1,10 @@
 package domain
 
-import "time"
+import (
+	"time"
+
+	"golang.org/x/crypto/bcrypt"
+)
 
 type User struct {
 	ID         int64
@@ -18,4 +22,9 @@ type User struct {
 type WechatInfo struct {
 	UnionID string
 	OpenID  string
+}
+
+func (u *User) VerifyPassword(inputPassword string) bool {
+	err := bcrypt.CompareHashAndPassword([]byte(u.Password), []byte(inputPassword))
+	return err == nil
 }

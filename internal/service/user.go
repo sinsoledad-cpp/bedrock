@@ -6,9 +6,10 @@ import (
 	"bedrock/pkg/logger"
 	"context"
 	"errors"
-	"golang.org/x/crypto/bcrypt"
 	"os"
 	"path/filepath"
+
+	"golang.org/x/crypto/bcrypt"
 )
 
 var (
@@ -57,8 +58,11 @@ func (svc *DefaultUserService) Login(ctx context.Context, email string, password
 		return domain.User{}, err
 	}
 	// 检查密码对不对
-	err = bcrypt.CompareHashAndPassword([]byte(u.Password), []byte(password))
-	if err != nil {
+	//err = bcrypt.CompareHashAndPassword([]byte(u.Password), []byte(password))
+	//if err != nil {
+	//	return domain.User{}, ErrInvalidUserOrPassword
+	//}
+	if !u.VerifyPassword(password) {
 		return domain.User{}, ErrInvalidUserOrPassword
 	}
 	return u, nil
