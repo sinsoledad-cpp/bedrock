@@ -71,9 +71,14 @@ func (c *CachedUserRepository) UpdateNonZeroFields(ctx context.Context, user dom
 	if err != nil {
 		return err
 	}
-	// 延迟一秒
+	// 延迟一秒再次删除（延时双删）
 	time.AfterFunc(time.Second, func() {
-		_ = c.cache.Delete(ctx, user.ID)
+		bgCtx, cancel := context.WithTimeout(context.Background(), time.Second*5)
+		defer cancel()
+		if err := c.cache.Delete(bgCtx, user.ID); err != nil {
+			// 这里因为是在 goroutine 里，建议记录一条 Error 日志
+			// fmt.Printf("延时双删失败: %v\n", err)
+		}
 	})
 	return c.cache.Delete(ctx, user.ID)
 }
