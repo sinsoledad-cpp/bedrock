@@ -91,11 +91,11 @@ func (svc *DefaultUserService) UpdateAvatarPath(ctx context.Context, uid int64, 
 		absOldPath, err := filepath.Abs(oldAvatarPath)
 		if err != nil {
 			// 转换路径失败，只记录日志，不影响主流程
-			svc.l.Warn("转换旧头像为绝对路径失败", logger.Error(err), logger.String("old_avatar_path", oldAvatarPath))
+			svc.l.Warn(ctx, "转换旧头像为绝对路径失败", logger.Error(err), logger.String("old_avatar_path", oldAvatarPath))
 		} else {
 			if err := os.Remove(absOldPath); err != nil {
 				// 删除旧文件失败是一个可以容忍的错误，记录日志即可
-				svc.l.Warn("数据库更新成功,但删除旧头像失败", logger.Error(err), logger.String("old_avatar_path", absOldPath))
+				svc.l.Warn(ctx, "数据库更新成功,但删除旧头像失败", logger.Error(err), logger.String("old_avatar_path", absOldPath))
 			}
 		}
 	}

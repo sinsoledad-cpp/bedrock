@@ -107,7 +107,7 @@ func (u *UserHandler) SignUp(ctx *gin.Context, req SignUpReq) (ginx.Result, erro
 	// 业务逻辑
 	err = u.userSvc.Signup(ctx.Request.Context(), domain.User{Email: req.Email, Password: req.ConfirmPassword})
 	if errors.Is(err, service.ErrDuplicateEmail) {
-		u.log.Warn("用户邮箱冲突", logger.Error(err))
+		u.log.Warn(ctx.Request.Context(), "用户邮箱冲突", logger.Error(err))
 		return ginx.Result{
 			Code: errs.UserDuplicateEmail,
 			Msg:  "邮箱冲突",
@@ -238,13 +238,13 @@ func (u *UserHandler) UploadAvatar(ctx *gin.Context, uc jwtware.UserClaims) (gin
 
 	// 2. 创建目录
 	if err := os.MkdirAll(filepath.Dir(newPath), os.ModePerm); err != nil {
-		u.log.Error("创建头像目录失败", logger.Error(err))
+		u.log.Error(ctx.Request.Context(), "创建头像目录失败", logger.Error(err))
 		return ginx.Result{Code: http.StatusInternalServerError, Msg: "系统错误"}, err
 	}
 
 	// 3. 保存文件
 	if err := ctx.SaveUploadedFile(file, newPath); err != nil {
-		u.log.Error("保存头像文件失败", logger.Error(err))
+		u.log.Error(ctx.Request.Context(), "保存头像文件失败", logger.Error(err))
 		return ginx.Result{
 			Code: http.StatusInternalServerError,
 			Msg:  "系统错误",
@@ -259,7 +259,7 @@ func (u *UserHandler) UploadAvatar(ctx *gin.Context, uc jwtware.UserClaims) (gin
 		absNewPath, absErr := filepath.Abs(newPath)
 		if absErr != nil {
 			// 如果获取绝对路径失败，记录一个警告，然后尝试用原路径删除
-			u.log.Warn("获取新头像绝对路径失败，将尝试使用相对路径删除",
+			u.log.Warn(ctx.Request.Context(), "获取新头像绝对路径失败，将尝试使用相对路径删除",
 				logger.Error(absErr),
 				logger.String("new_avatar_path", newPath),
 			)
@@ -267,13 +267,13 @@ func (u *UserHandler) UploadAvatar(ctx *gin.Context, uc jwtware.UserClaims) (gin
 		}
 
 		if removeErr := os.Remove(absNewPath); removeErr != nil {
-			u.log.Warn("数据库更新失败进行回滚操作,但是删除新头像失败",
+			u.log.Warn(ctx.Request.Context(), "数据库更新失败进行回滚操作,但是删除新头像失败",
 				logger.Error(removeErr),
 				logger.String("new_avatar_path", absNewPath),
 			)
 		}
 
-		u.log.Error("更新用户头像业务逻辑失败", logger.Error(err))
+		u.log.Error(ctx.Request.Context(), "更新用户头像业务逻辑失败", logger.Error(err))
 		return ginx.Result{
 			Code: http.StatusInternalServerError,
 			Msg:  "系统错误",

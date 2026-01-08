@@ -3,6 +3,7 @@ package ioc
 import (
 	"bedrock/internal/repository/dao"
 	"bedrock/pkg/logger"
+	"context"
 	"fmt"
 
 	"github.com/spf13/viper"
@@ -24,7 +25,9 @@ func InitMySQL(l logger.Logger) *gorm.DB {
 	}
 	db, err := gorm.Open(mysql.Open(cfg.DSN),
 		&gorm.Config{
-			Logger: glogger.New(gormLoggerFunc(l.Debug), glogger.Config{
+			Logger: glogger.New(gormLoggerFunc(func(msg string, fields ...logger.Field) {
+				l.Debug(context.Background(), msg, fields...)
+			}), glogger.Config{
 				// 慢查询
 				SlowThreshold: 0,
 				LogLevel:      glogger.Info,

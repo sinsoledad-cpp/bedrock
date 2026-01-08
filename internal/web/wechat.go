@@ -50,7 +50,7 @@ func (o *OAuth2WechatHandler) Auth2URL(ctx *gin.Context) (ginx.Result, error) {
 	state := uuid.New()
 	val, err := o.wechatSvc.AuthURL(ctx, state)
 	if err != nil {
-		o.l.Error("获取微信授权码失败", logger.Error(err))
+		o.l.Error(ctx.Request.Context(), "获取微信授权码失败", logger.Error(err))
 		return ginx.Result{
 			Code: errs.WechatCodeGetDefeated,
 			Msg:  "获取微信授权码失败",
@@ -58,7 +58,7 @@ func (o *OAuth2WechatHandler) Auth2URL(ctx *gin.Context) (ginx.Result, error) {
 	}
 	err = o.setStateCookie(ctx, state)
 	if err != nil {
-		o.l.Error("设置 state cookie 失败", logger.Error(err))
+		o.l.Error(ctx.Request.Context(), "设置 state cookie 失败", logger.Error(err))
 		return ginx.Result{
 			Code: errs.WechatInternalServerError,
 			Msg:  "服务器异常",

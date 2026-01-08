@@ -1,6 +1,10 @@
 package logger
 
-import "go.uber.org/zap"
+import (
+	"context"
+
+	"go.uber.org/zap"
+)
 
 var _ Logger = (*ZapLogger)(nil)
 
@@ -12,19 +16,19 @@ func NewZapLogger(logger *zap.Logger) Logger {
 	return &ZapLogger{logger: logger}
 }
 
-func (l *ZapLogger) Info(msg string, args ...Field) {
+func (l *ZapLogger) Info(ctx context.Context, msg string, args ...Field) {
 	l.logger.Info(msg, l.toArgs(args)...)
 }
 
-func (l *ZapLogger) Debug(msg string, args ...Field) {
+func (l *ZapLogger) Debug(ctx context.Context, msg string, args ...Field) {
 	l.logger.Debug(msg, l.toArgs(args)...)
 }
 
-func (l *ZapLogger) Warn(msg string, args ...Field) {
+func (l *ZapLogger) Warn(ctx context.Context, msg string, args ...Field) {
 	l.logger.Warn(msg, l.toArgs(args)...)
 }
 
-func (l *ZapLogger) Error(msg string, args ...Field) {
+func (l *ZapLogger) Error(ctx context.Context, msg string, args ...Field) {
 	l.logger.Error(msg, l.toArgs(args)...)
 }
 

@@ -1,10 +1,13 @@
 package logger
 
+import "context"
+
+// Logger 核心接口：强制要求 Context
 type Logger interface {
-	Debug(msg string, args ...Field)
-	Info(msg string, args ...Field)
-	Warn(msg string, args ...Field)
-	Error(msg string, args ...Field)
+	Debug(ctx context.Context, msg string, args ...Field)
+	Info(ctx context.Context, msg string, args ...Field)
+	Warn(ctx context.Context, msg string, args ...Field)
+	Error(ctx context.Context, msg string, args ...Field)
 }
 
 type Field struct {

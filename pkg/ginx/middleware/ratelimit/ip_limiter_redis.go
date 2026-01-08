@@ -4,10 +4,11 @@ import (
 	"bedrock/pkg/logger"
 	_ "embed"
 	"fmt"
-	"github.com/gin-gonic/gin"
-	"github.com/redis/go-redis/v9"
 	"net/http"
 	"time"
+
+	"github.com/gin-gonic/gin"
+	"github.com/redis/go-redis/v9"
 )
 
 var log = logger.NewNopLogger()
@@ -50,12 +51,12 @@ func (r *RedisIpLimiter) Build() gin.HandlerFunc {
 		if err != nil {
 			// 这一步很有意思，就是如果这边出错了
 			// 要怎么办？
-			log.Error("ip限流失败", logger.Error(err))
+			log.Error(ctx.Request.Context(), "ip限流失败", logger.Error(err))
 			ctx.AbortWithStatus(http.StatusInternalServerError)
 			return
 		}
 		if limited {
-			log.Warn("ip限流", logger.String("ip", ctx.ClientIP()))
+			log.Warn(ctx.Request.Context(), "ip限流", logger.String("ip", ctx.ClientIP()))
 			ctx.AbortWithStatus(http.StatusTooManyRequests)
 			return
 		}
