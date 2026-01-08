@@ -7,35 +7,34 @@
 package main
 
 import (
-	ioc2 "bedrock/cmd/server/ioc"
+	"bedrock/cmd/server/ioc"
 	"bedrock/internal/repository"
 	"bedrock/internal/repository/cache"
 	"bedrock/internal/repository/dao"
 	"bedrock/internal/service"
 	"bedrock/internal/web"
 	"bedrock/internal/web/middleware/jwt"
-
 	"github.com/google/wire"
 )
 
 // Injectors from wire.go:
 
 func InitApp() *App {
-	cmdable := ioc2.InitRedis()
+	cmdable := ioc.InitRedis()
 	handler := jwt.NewRedisJWTHandler(cmdable)
-	v := ioc2.InitGinMiddlewares(handler)
-	logger := ioc2.InitLogger()
-	db := ioc2.InitMySQL(logger)
+	v := ioc.InitGinMiddlewares(handler)
+	logger := ioc.InitLogger()
+	db := ioc.InitMySQL(logger)
 	userDAO := dao.NewGORMUserDAO(db)
 	userCache := cache.NewRedisUserCache(cmdable)
-	userRepository := repository.NewCachedUserRepository(userDAO, userCache)
+	userRepository := repository.NewCachedUserRepository(userDAO, userCache, logger)
 	userService := service.NewUserService(logger, userRepository)
 	codeCache := cache.NewRedisCodeCache(cmdable)
 	codeRepository := repository.NewCachedCodeRepository(codeCache)
-	smsService := ioc2.InitSMSService()
+	smsService := ioc.InitSMSService()
 	codeService := service.NewCodeService(codeRepository, smsService)
 	userHandler := web.NewUserHandler(logger, userService, codeService, handler)
-	engine := ioc2.InitWebEngine(v, logger, userHandler)
+	engine := ioc.InitWebEngine(v, logger, userHandler)
 	app := &App{
 		engine: engine,
 	}
@@ -44,8 +43,8 @@ func InitApp() *App {
 
 // wire.go:
 
-var thirdParty = wire.NewSet(ioc2.InitLogger, ioc2.InitMySQL, ioc2.InitRedis)
+var thirdParty = wire.NewSet(ioc.InitLogger, ioc.InitMySQL, ioc.InitRedis)
 
 var userSvc = wire.NewSet(cache.NewRedisUserCache, dao.NewGORMUserDAO, repository.NewCachedUserRepository, service.NewUserService)
 
-var codeSvc = wire.NewSet(cache.NewRedisCodeCache, repository.NewCachedCodeRepository, ioc2.InitSMSService, service.NewCodeService)
+var codeSvc = wire.NewSet(cache.NewRedisCodeCache, repository.NewCachedCodeRepository, ioc.InitSMSService, service.NewCodeService)

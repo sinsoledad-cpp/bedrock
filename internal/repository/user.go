@@ -4,6 +4,7 @@ import (
 	"bedrock/internal/domain"
 	"bedrock/internal/repository/cache"
 	"bedrock/internal/repository/dao"
+	"bedrock/pkg/logger"
 	"context"
 	"database/sql"
 	"errors"
@@ -34,13 +35,15 @@ type UserRepository interface {
 type CachedUserRepository struct {
 	dao   dao.UserDAO
 	cache cache.UserCache
+	l     logger.Logger
 	g     singleflight.Group //不需要初始化，零值直接可用
 }
 
-func NewCachedUserRepository(userDAO dao.UserDAO, userCache cache.UserCache) UserRepository {
+func NewCachedUserRepository(userDAO dao.UserDAO, userCache cache.UserCache, l logger.Logger) UserRepository {
 	return &CachedUserRepository{
 		dao:   userDAO,
 		cache: userCache,
+		l:     l,
 	}
 }
 
@@ -78,6 +81,7 @@ func (c *CachedUserRepository) UpdateNonZeroFields(ctx context.Context, user dom
 		if err := c.cache.Delete(bgCtx, user.ID); err != nil {
 			// 这里因为是在 goroutine 里，建议记录一条 Error 日志
 			// fmt.Printf("延时双删失败: %v\n", err)
+			c.l.Error(bgCtx, "延时双删失败", logger.Error(err), logger.Int64("uid", user.ID))
 		}
 	})
 	return c.cache.Delete(ctx, user.ID)
@@ -128,6 +132,7 @@ func (c *CachedUserRepository) FindById(ctx context.Context, uid int64) (domain.
 			// 建议：此处加上日志记录
 			// log.Println("回写用户缓存失败", err)
 			// fmt.Printf("回写用户缓存失败: %v\n", err)
+			c.l.Warn(ctx, "回写用户缓存失败", logger.Error(err), logger.Int64("uid", uid))
 		}
 
 		return du, nil
@@ -145,6 +150,7 @@ func (c *CachedUserRepository) FindById(ctx context.Context, uid int64) (domain.
 		// 这种情况理论上不应该发生，除非 singleflight 内部的函数返回类型被改了
 		// 这里应该记录一条 Error 级别的日志，提示开发者检查代码
 		// log.Error("singleflight type assertion failed", logger.String("key", key))
+		c.l.Error(ctx, "singleflight type assertion failed", logger.String("key", key))
 		return domain.User{}, errors.New("系统内部错误: 类型转换失败")
 	}
 
