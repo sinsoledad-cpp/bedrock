@@ -7,6 +7,8 @@ import (
 
 // Provider 定义存储行为的标准接口
 // 设计原则：依赖抽象，不依赖具体实现
+//
+//go:generate mockgen -source=./type.go -package=mocks -destination=./mocks/provider_mock.go Provider
 type Provider interface {
 	// Upload 上传文件
 	// ctx:用于控制超时或取消

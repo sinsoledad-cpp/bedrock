@@ -286,6 +286,14 @@ func (u *UserHandler) UploadAvatar(ctx *gin.Context, uc jwtware.UserClaims) (gin
 	}, nil
 }
 
+type ProfileVO struct {
+	Nickname string `json:"nickname"`
+	Email    string `json:"email"`
+	AboutMe  string `json:"aboutMe"`
+	Birthday string `json:"birthday"`
+	Avatar   string `json:"avatar"`
+}
+
 func (u *UserHandler) Profile(ctx *gin.Context, uc jwtware.UserClaims) (ginx.Result, error) {
 	user, err := u.userSvc.FindById(ctx, uc.Uid)
 	if err != nil {
@@ -294,17 +302,10 @@ func (u *UserHandler) Profile(ctx *gin.Context, uc jwtware.UserClaims) (ginx.Res
 			Msg:  "系统错误",
 		}, err
 	}
-	type User struct {
-		Nickname string `json:"nickname"`
-		Email    string `json:"email"`
-		AboutMe  string `json:"aboutMe"`
-		Birthday string `json:"birthday"`
-		Avatar   string `json:"avatar"`
-	}
 	return ginx.Result{
 		Code: http.StatusOK,
 		Msg:  "获取用户信息成功",
-		Data: User{
+		Data: ProfileVO{
 			Nickname: user.Nickname,
 			Email:    user.Email,
 			AboutMe:  user.AboutMe,

@@ -17,7 +17,7 @@ var (
 	ErrInvalidUserOrPassword = errors.New("用户不存在或者密码不对")
 )
 
-//go:generate mockgen -source=./user.go -package=mocks -destination=./mocks/user.mock.go UserService
+//go:generate mockgen -source=./user.go -package=mocks -destination=./mocks/user_mock.go UserService
 type UserService interface {
 	Signup(ctx context.Context, user domain.User) error
 	Login(ctx context.Context, email string, password string) (domain.User, error)

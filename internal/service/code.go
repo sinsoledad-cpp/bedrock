@@ -13,7 +13,7 @@ var ErrCodeSendTooMany = repository.ErrCodeSendTooMany
 var ErrCodeVerifyTooMany = repository.ErrCodeVerifyTooMany
 var ErrCodeExpired = repository.ErrCodeExpired
 
-//go:generate mockgen -source=./code.go -package=svcmocks -destination=./mocks/code.mock.go CodeService
+//go:generate mockgen -source=./code.go -package=mocks -destination=./mocks/code_mock.go CodeService
 type CodeService interface {
 	Send(ctx context.Context, biz, phone string) error
 	Verify(ctx context.Context, biz, phone, inputCode string) (bool, error)
