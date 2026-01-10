@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp"
 	"go.opentelemetry.io/otel/exporters/zipkin"
 	"go.opentelemetry.io/otel/propagation"
 	"go.opentelemetry.io/otel/sdk/resource"
@@ -13,22 +14,53 @@ import (
 )
 
 // InitOTEL 返回一个关闭函数，并且让调用者关闭的时候来决定这个 ctx
-func InitOTEL() func(ctx context.Context) {
+// InitOTEL 初始化 OpenTelemetry
+func InitOTEL() func(context.Context) {
+	ctx := context.Background()
 	res, err := newResource("bedrock", "v0.0.1")
 	if err != nil {
 		panic(err)
 	}
 
 	prop := newPropagator()
-	// 在客户端和服务端之间传递 tracing 的相关信息
 	otel.SetTextMapPropagator(prop)
 
-	// 初始化 trace provider
-	// 这个 provider 就是用来在打点的时候构建 trace 的
-	tp, err := newTraceProvider(res)
+	// ---------------------------------------------------------
+	// 1. 初始化 OTLP Exporter (用于发给 Jaeger 4318 端口)
+	// ---------------------------------------------------------
+	otlpExporter, err := otlptracehttp.New(ctx,
+		// 如果你修改了 docker 映射端口，这里记得改成 localhost:14318
+		otlptracehttp.WithEndpoint("localhost:4318"),
+		otlptracehttp.WithInsecure(),
+	)
 	if err != nil {
 		panic(err)
 	}
+
+	// ---------------------------------------------------------
+	// 2. 初始化 Zipkin Exporter (用于发给 Zipkin 9411 端口)
+	// ---------------------------------------------------------
+	// 注意：Jaeger 本身也兼容 Zipkin 协议，所以这个地址既可以是
+	// 真正的 Zipkin Server，也可以是 Jaeger 的 9411 端口。
+	zipkinExporter, err := zipkin.New("http://localhost:19411/api/v2/spans")
+	if err != nil {
+		panic(err)
+	}
+
+	// ---------------------------------------------------------
+	// 3. 注册多个 Exporter 到 Provider
+	// ---------------------------------------------------------
+	// 关键点：多次调用 trace.WithBatcher 即可
+	tp := trace.NewTracerProvider(
+		trace.WithResource(res),
+
+		// 第一个导出通道：发往 OTLP (Jaeger)
+		trace.WithBatcher(otlpExporter, trace.WithBatchTimeout(time.Second)),
+
+		// 第二个导出通道：发往 Zipkin
+		trace.WithBatcher(zipkinExporter, trace.WithBatchTimeout(time.Second)),
+	)
+
 	otel.SetTracerProvider(tp)
 
 	return func(ctx context.Context) {
@@ -53,23 +85,4 @@ func newPropagator() propagation.TextMapPropagator {
 		propagation.TraceContext{},
 		propagation.Baggage{},
 	)
-}
-
-// 创建一个“追踪提供者”
-func newTraceProvider(res *resource.Resource) (*trace.TracerProvider, error) {
-	// 将 OTel 内存中的 Span 数据转换成特定后端（Zipkin）的格式
-	exporter, err := zipkin.New("http://localhost:9411/api/v2/spans")
-	if err != nil {
-		return nil, err
-	}
-
-	traceProvider := trace.NewTracerProvider(
-		trace.WithBatcher(
-			exporter,
-			// Default is 5s. Set to 1s for demonstrative purposes.
-			trace.WithBatchTimeout(time.Second),
-		),
-		trace.WithResource(res),
-	)
-	return traceProvider, nil
 }

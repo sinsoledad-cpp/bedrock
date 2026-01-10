@@ -3,6 +3,7 @@ package main
 import (
 	"bedrock/cmd/server/bootstrap"
 	"context"
+	"fmt"
 	"net/http"
 	"os"
 	"os/signal"
@@ -48,15 +49,15 @@ func main() {
 
 	// 阻塞直到接收到信号
 	<-quit
-	println("Shutting down server...")
+	fmt.Println("Shutting down server...")
 
 	// 3. 创建一个 5 秒超时的 Context，给正在处理的请求一点时间收尾
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
 	if err := srv.Shutdown(ctx); err != nil {
-		println("Server forced to shutdown:", err.Error())
+		fmt.Println("Server forced to shutdown:", err.Error())
 	}
 
-	println("Server exiting")
+	fmt.Println("Server exiting")
 }
