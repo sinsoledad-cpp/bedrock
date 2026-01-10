@@ -22,8 +22,8 @@ import (
 func InitApp() *App {
 	cmdable := ioc.InitRedis()
 	handler := jwt.NewRedisJWTHandler(cmdable)
-	v := ioc.InitGinMiddlewares(handler)
 	logger := ioc.InitLogger()
+	v := ioc.InitGinMiddlewares(handler, logger)
 	db := ioc.InitMySQL(logger)
 	userDAO := dao.NewGORMUserDAO(db)
 	userCache := cache.NewRedisUserCache(cmdable)
@@ -33,7 +33,8 @@ func InitApp() *App {
 	codeRepository := repository.NewCachedCodeRepository(codeCache)
 	smsService := ioc.InitSMSService()
 	codeService := service.NewCodeService(codeRepository, smsService)
-	userHandler := web.NewUserHandler(logger, userService, codeService, handler)
+	provider := ioc.InitStorageService()
+	userHandler := web.NewUserHandler(logger, userService, codeService, provider, handler)
 	engine := ioc.InitWebEngine(v, logger, userHandler)
 	app := &App{
 		engine: engine,
@@ -43,7 +44,7 @@ func InitApp() *App {
 
 // wire.go:
 
-var thirdParty = wire.NewSet(ioc.InitLogger, ioc.InitMySQL, ioc.InitRedis)
+var thirdParty = wire.NewSet(ioc.InitLogger, ioc.InitMySQL, ioc.InitRedis, ioc.InitStorageService)
 
 var userSvc = wire.NewSet(cache.NewRedisUserCache, dao.NewGORMUserDAO, repository.NewCachedUserRepository, service.NewUserService)
 

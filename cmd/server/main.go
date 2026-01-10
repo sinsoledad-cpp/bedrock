@@ -1,7 +1,7 @@
 package main
 
 import (
-	"bedrock/setting"
+	"bedrock/cmd/server/bootstrap"
 	"context"
 	"net/http"
 	"os"
@@ -14,7 +14,14 @@ import (
 // the <icon src="AllIcons.Actions.Execute"/> icon in the gutter and select the <b>Run</b> menu item from here.</p>
 
 func main() {
-	setting.InitViper()
+	bootstrap.InitViper()
+	bootstrap.InitValidate()
+	tpCancel := bootstrap.InitOTEL()
+	defer func() {
+		ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+		defer cancel()
+		tpCancel(ctx)
+	}()
 
 	app := InitApp()
 

@@ -2,11 +2,12 @@ package middleware
 
 import (
 	jwtware "bedrock/internal/web/middleware/jwt"
+	"net/http"
+	"time"
+
 	"github.com/ecodeclub/ekit/set"
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
-	"net/http"
-	"time"
 )
 
 type JWTAuth struct {
@@ -16,11 +17,11 @@ type JWTAuth struct {
 
 func NewJWTAuth(hdl jwtware.Handler) *JWTAuth {
 	s := set.NewMapSet[string](6)
-	s.Add("/user/signup")
-	s.Add("/user/login_sms/code/send")
-	s.Add("/user/login_sms")
-	s.Add("/user/refresh_token")
-	s.Add("/user/login")
+	s.Add("/users/signup")
+	s.Add("/users/login_sms/code/send")
+	s.Add("/users/login_sms")
+	s.Add("/users/refresh_token")
+	s.Add("/users/login")
 	s.Add("/oauth2/wechat/authurl")
 	s.Add("/oauth2/wechat/callback")
 	s.Add("/test/random")

@@ -1,4 +1,4 @@
-package setting
+package bootstrap
 
 import (
 	"bedrock/pkg/validate"

@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/uptrace/opentelemetry-go-extra/otelzap"
+	"go.opentelemetry.io/otel/trace"
 	"go.uber.org/zap"
 )
 
@@ -20,19 +21,22 @@ func NewOtelZapLogger(l *otelzap.Logger) Logger {
 }
 
 func (o *OtelZapLogger) Debug(ctx context.Context, msg string, args ...Field) {
-	// 核心魔法：otelzap.Ctx(ctx) 会自动从 context 提取 TraceID
+	args = o.injectTraceContext(ctx, args)
 	o.l.Ctx(ctx).Debug(msg, o.toZapFields(args)...)
 }
 
 func (o *OtelZapLogger) Info(ctx context.Context, msg string, args ...Field) {
+	args = o.injectTraceContext(ctx, args)
 	o.l.Ctx(ctx).Info(msg, o.toZapFields(args)...)
 }
 
 func (o *OtelZapLogger) Warn(ctx context.Context, msg string, args ...Field) {
+	args = o.injectTraceContext(ctx, args)
 	o.l.Ctx(ctx).Warn(msg, o.toZapFields(args)...)
 }
 
 func (o *OtelZapLogger) Error(ctx context.Context, msg string, args ...Field) {
+	args = o.injectTraceContext(ctx, args)
 	o.l.Ctx(ctx).Error(msg, o.toZapFields(args)...)
 }
 
@@ -43,4 +47,14 @@ func (o *OtelZapLogger) toZapFields(args []Field) []zap.Field {
 		res = append(res, zap.Any(arg.Key, arg.Val))
 	}
 	return res
+}
+func (o *OtelZapLogger) injectTraceContext(ctx context.Context, args []Field) []Field {
+	if span := trace.SpanFromContext(ctx); span.SpanContext().IsValid() {
+		// 将 trace_id 和 span_id 拼接到 args 切片中
+		args = append(args,
+			Field{Key: "trace_id", Val: span.SpanContext().TraceID().String()},
+			Field{Key: "span_id", Val: span.SpanContext().SpanID().String()},
+		)
+	}
+	return args
 }

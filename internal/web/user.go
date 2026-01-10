@@ -7,15 +7,16 @@ import (
 	jwtware "bedrock/internal/web/middleware/jwt"
 	"bedrock/pkg/ginx"
 	"bedrock/pkg/logger"
+	"bedrock/pkg/storage"
 	"errors"
+	"net/http"
+	"path/filepath"
+	"time"
+
 	regexp "github.com/dlclark/regexp2"
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
-	"net/http"
-	"os"
-	"path/filepath"
-	"time"
 )
 
 var _ Handler = (*UserHandler)(nil)
@@ -30,16 +31,18 @@ type UserHandler struct {
 	log              logger.Logger
 	userSvc          service.UserService
 	codeSvc          service.CodeService
+	storageSvc       storage.Provider
 	jwtHdl           jwtware.Handler
 	emailRegexExp    *regexp.Regexp
 	passwordRegexExp *regexp.Regexp
 }
 
-func NewUserHandler(log logger.Logger, userSvc service.UserService, codeSvc service.CodeService, jwtHdl jwtware.Handler) *UserHandler {
+func NewUserHandler(log logger.Logger, userSvc service.UserService, codeSvc service.CodeService, storageSvc storage.Provider, jwtHdl jwtware.Handler) *UserHandler {
 	return &UserHandler{
 		log:              log,
 		userSvc:          userSvc,
 		codeSvc:          codeSvc,
+		storageSvc:       storageSvc,
 		jwtHdl:           jwtHdl,
 		emailRegexExp:    regexp.MustCompile(emailRegexPattern, regexp.None),
 		passwordRegexExp: regexp.MustCompile(passwordRegexPattern, regexp.None),
@@ -47,7 +50,7 @@ func NewUserHandler(log logger.Logger, userSvc service.UserService, codeSvc serv
 }
 
 func (u *UserHandler) RegisterRoutes(e *gin.Engine) {
-	g := e.Group("/user")
+	g := e.Group("/users")
 
 	g.POST("/signup", ginx.WrapBody(u.SignUp))
 	g.POST("/login", ginx.WrapBody(u.LoginJWT))
@@ -234,16 +237,21 @@ func (u *UserHandler) UploadAvatar(ctx *gin.Context, uc jwtware.UserClaims) (gin
 
 	// 1. 生成新文件的唯一路径
 	ext := filepath.Ext(file.Filename)
-	newPath := filepath.Join("uploads", "avatars", uuid.New().String()+ext)
+	key := filepath.Join("avatars", uuid.New().String()+ext)
 
-	// 2. 创建目录
-	if err := os.MkdirAll(filepath.Dir(newPath), os.ModePerm); err != nil {
-		u.log.Error(ctx.Request.Context(), "创建头像目录失败", logger.Error(err))
-		return ginx.Result{Code: http.StatusInternalServerError, Msg: "系统错误"}, err
+	f, err := file.Open()
+	if err != nil {
+		u.log.Error(ctx.Request.Context(), "初始化文件失败", logger.Error(err))
+		return ginx.Result{
+			Code: http.StatusInternalServerError,
+			Msg:  "系统错误",
+		}, err
 	}
+	defer f.Close()
 
 	// 3. 保存文件
-	if err := ctx.SaveUploadedFile(file, newPath); err != nil {
+	url, err := u.storageSvc.Upload(ctx.Request.Context(), key, f, file.Size)
+	if err != nil {
 		u.log.Error(ctx.Request.Context(), "保存头像文件失败", logger.Error(err))
 		return ginx.Result{
 			Code: http.StatusInternalServerError,
@@ -252,24 +260,13 @@ func (u *UserHandler) UploadAvatar(ctx *gin.Context, uc jwtware.UserClaims) (gin
 	}
 
 	// 4. 调用 service 层处理业务逻辑
-	err = u.userSvc.UpdateAvatarPath(ctx.Request.Context(), uc.Uid, newPath)
+	err = u.userSvc.UpdateAvatarPath(ctx.Request.Context(), uc.Uid, url)
 	if err != nil {
 		// 如果业务逻辑处理失败（例如数据库更新失败），则删除刚刚保存的文件，进行“回滚”
-		// *** 使用绝对路径进行删除，增强代码的健壮性 ***
-		absNewPath, absErr := filepath.Abs(newPath)
-		if absErr != nil {
-			// 如果获取绝对路径失败，记录一个警告，然后尝试用原路径删除
-			u.log.Warn(ctx.Request.Context(), "获取新头像绝对路径失败，将尝试使用相对路径删除",
-				logger.Error(absErr),
-				logger.String("new_avatar_path", newPath),
-			)
-			absNewPath = newPath // 回退到使用相对路径
-		}
-
-		if removeErr := os.Remove(absNewPath); removeErr != nil {
+		if removeErr := u.storageSvc.Delete(ctx.Request.Context(), key); removeErr != nil {
 			u.log.Warn(ctx.Request.Context(), "数据库更新失败进行回滚操作,但是删除新头像失败",
 				logger.Error(removeErr),
-				logger.String("new_avatar_path", absNewPath),
+				logger.String("new_avatar_path", key),
 			)
 		}
 
@@ -284,7 +281,7 @@ func (u *UserHandler) UploadAvatar(ctx *gin.Context, uc jwtware.UserClaims) (gin
 		Code: http.StatusOK,
 		Msg:  "头像上传成功",
 		Data: gin.H{
-			"avatar_url": newPath, // 返回新的头像路径
+			"avatar_url": url, // 返回新的头像路径
 		},
 	}, nil
 }

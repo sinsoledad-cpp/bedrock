@@ -10,7 +10,7 @@ import (
 )
 
 // lg 是全局的 zap.Logger 实例，用于记录日志
-var lg *zap.Logger
+//var lg *zap.Logger
 
 // logConf 配置信息
 type logConf struct {
@@ -47,9 +47,9 @@ func InitZap(mode string) (err error) {
 	} else {
 		core = zapcore.NewCore(encoder, writeSyncer, l) // 生产模式下，只将日志写入文件
 	}
-	lg = zap.New(core, zap.AddCaller(), zap.AddCallerSkip(1)) // 创建一个新的 zap.Logger 实例，并添加调用者信息
-	zap.ReplaceGlobals(lg)                                    // 替换全局 logger 实例
-	zap.L().Info("init logger success!")                      // 记录初始化成功的日志信息
+	lg := zap.New(core, zap.AddCaller(), zap.AddCallerSkip(1)) // 创建一个新的 zap.Logger 实例，并添加调用者信息
+	zap.ReplaceGlobals(lg)                                     // 替换全局 logger 实例
+	zap.L().Info("init logger success!")                       // 记录初始化成功的日志信息
 	return
 }
 

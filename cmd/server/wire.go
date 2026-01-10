@@ -18,6 +18,7 @@ var thirdParty = wire.NewSet(
 	ioc2.InitLogger,
 	ioc2.InitMySQL,
 	ioc2.InitRedis,
+	ioc2.InitStorageService,
 )
 
 var userSvc = wire.NewSet(
