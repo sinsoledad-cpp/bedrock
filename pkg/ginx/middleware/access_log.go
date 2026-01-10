@@ -66,7 +66,7 @@ func (l *AccessLogBuilder) Build() gin.HandlerFunc {
 		defer func() {
 			al.Duration = time.Since(start)
 			//duration := time.Now().Sub(start)
-			l.logFn(ctx, al)
+			l.logFn(ctx.Request.Context(), al)
 		}()
 
 		// 直接执行下一个 middleware...直到业务逻辑
