@@ -46,7 +46,7 @@ func InitWebServer() *gin.Engine {
 	provider := InitStorageService()
 	handler := jwt.NewRedisJWTHandler(cmdable)
 	userHandler := web.NewUserHandler(logger, userService, codeService, provider, handler)
-	engine := InitGinServer(userHandler)
+	engine := InitGinServer(userHandler, handler)
 	return engine
 }
 
