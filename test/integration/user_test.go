@@ -2,6 +2,7 @@ package integration
 
 import (
 	"bytes"
+	"context"
 	"database/sql"
 	"encoding/json"
 	"net/http"
@@ -23,16 +24,17 @@ import (
 
 type UserTestSuite struct {
 	suite.Suite
+	server *gin.Engine
 	db     *gorm.DB
 	rdb    redis.Cmdable
-	server *gin.Engine
 }
 
 func (s *UserTestSuite) SetupSuite() {
+	s.server = startup.InitWebServer()
 	s.db = startup.InitMySQL()
 	s.rdb = startup.InitRedis()
-	s.server = startup.InitWebServer()
-
+	// 初始化数据
+	// 确保测试数据不存在
 	// 初始化表结构
 	if err := dao.InitTables(s.db); err != nil {
 		s.T().Fatal(err)
@@ -456,6 +458,222 @@ func (s *UserTestSuite) TestProfile() {
 	}
 }
 
+func (s *UserTestSuite) TestLoginSMS() {
+	t := s.T()
+	testCases := []struct {
+		name     string
+		before   func(t *testing.T)
+		after    func(t *testing.T)
+		phone    string
+		wantCode int
+		wantMsg  string
+	}{
+		{
+			name: "登录成功",
+			before: func(t *testing.T) {
+			},
+			after: func(t *testing.T) {
+			},
+			phone:    "12345678901",
+			wantCode: 200,
+			wantMsg:  "登录成功",
+		},
+	}
+
+	for _, tc := range testCases {
+		tc := tc
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			if tc.before != nil {
+				tc.before(t)
+			}
+
+			// 1. 发送验证码
+			reqBody := map[string]string{
+				"phone": tc.phone,
+			}
+			body, _ := json.Marshal(reqBody)
+			req, _ := http.NewRequest(http.MethodPost, "/users/login_sms/code/send", bytes.NewBuffer(body))
+			req.Header.Set("Content-Type", "application/json")
+			w := httptest.NewRecorder()
+			s.server.ServeHTTP(w, req)
+			assert.Equal(t, http.StatusOK, w.Code)
+
+			// 2. 从 Redis 获取验证码
+			// key format: phone_code:login:PHONE
+			ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+			defer cancel()
+			code, err := s.rdb.Get(ctx, "phone_code:login:"+tc.phone).Result()
+			assert.NoError(t, err)
+			assert.NotEmpty(t, code)
+
+			// 3. 登录
+			loginReqBody := map[string]string{
+				"phone": tc.phone,
+				"code":  code,
+			}
+			loginBody, _ := json.Marshal(loginReqBody)
+			loginReq, _ := http.NewRequest(http.MethodPost, "/users/login_sms", bytes.NewBuffer(loginBody))
+			loginReq.Header.Set("Content-Type", "application/json")
+			loginW := httptest.NewRecorder()
+			s.server.ServeHTTP(loginW, loginReq)
+
+			assert.Equal(t, http.StatusOK, loginW.Code)
+			var res map[string]interface{}
+			err = json.Unmarshal(loginW.Body.Bytes(), &res)
+			if err != nil {
+				t.Fatal(err)
+			}
+			assert.Equal(t, float64(tc.wantCode), res["code"])
+			assert.Equal(t, tc.wantMsg, res["msg"])
+
+			// 验证 token
+			token := loginW.Header().Get("x-jwt-token")
+			assert.NotEmpty(t, token)
+
+			if tc.after != nil {
+				tc.after(t)
+			}
+		})
+	}
+}
+
+func (s *UserTestSuite) TestLogout() {
+	t := s.T()
+
+	testCases := []struct {
+		name     string
+		before   func(t *testing.T) (string, int64)
+		after    func(t *testing.T, uid int64)
+		wantCode int
+		wantMsg  string
+	}{
+		{
+			name: "退出登录成功",
+			before: func(t *testing.T) (string, int64) {
+				email := "test_logout_success@example.com"
+				uid := s.createUser(t, email)
+				token := s.login(t, uid)
+				return token, uid
+			},
+			after: func(t *testing.T, uid int64) {
+				// 验证 session 是否已清除（通过再次请求需要认证的接口来验证，应该返回 401）
+				// 但由于并行测试，这里直接复用 token 去请求 profile 接口比较方便
+			},
+			wantCode: 200,
+			wantMsg:  "退出登录成功",
+		},
+	}
+
+	for _, tc := range testCases {
+		tc := tc
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			var token string
+			var uid int64
+			if tc.before != nil {
+				token, uid = tc.before(t)
+			}
+
+			req, err := http.NewRequest(http.MethodPost, "/users/logout", nil)
+			if err != nil {
+				t.Fatal(err)
+			}
+			req.Header.Set("Authorization", token)
+
+			w := httptest.NewRecorder()
+			s.server.ServeHTTP(w, req)
+
+			assert.Equal(t, http.StatusOK, w.Code)
+			var res map[string]interface{}
+			err = json.Unmarshal(w.Body.Bytes(), &res)
+			if err != nil {
+				t.Fatal(err)
+			}
+			assert.Equal(t, float64(tc.wantCode), res["code"])
+			assert.Equal(t, tc.wantMsg, res["msg"])
+
+			// 验证退出后 token 失效
+			reqProfile, _ := http.NewRequest(http.MethodGet, "/users/profile", nil)
+			reqProfile.Header.Set("Authorization", token)
+			wProfile := httptest.NewRecorder()
+			s.server.ServeHTTP(wProfile, reqProfile)
+			assert.Equal(t, http.StatusUnauthorized, wProfile.Code)
+
+			if tc.after != nil {
+				tc.after(t, uid)
+			}
+		})
+	}
+}
+
+func (s *UserTestSuite) TestRefreshToken() {
+	t := s.T()
+
+	testCases := []struct {
+		name     string
+		before   func(t *testing.T) (string, string, int64)
+		after    func(t *testing.T, uid int64)
+		wantCode int
+		wantMsg  string
+	}{
+		{
+			name: "刷新 token 成功",
+			before: func(t *testing.T) (string, string, int64) {
+				email := "test_refresh_success@example.com"
+				uid := s.createUser(t, email)
+				token, refreshToken := s.loginWithRefreshToken(t, uid)
+				return token, refreshToken, uid
+			},
+			after: func(t *testing.T, uid int64) {
+			},
+			wantCode: 200,
+			wantMsg:  "刷新成功",
+		},
+	}
+
+	for _, tc := range testCases {
+		tc := tc
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			var refreshToken string
+			var uid int64
+			if tc.before != nil {
+				_, refreshToken, uid = tc.before(t)
+			}
+
+			req, err := http.NewRequest(http.MethodPost, "/users/refresh_token", nil)
+			if err != nil {
+				t.Fatal(err)
+			}
+			req.Header.Set("X-Refresh-Token", refreshToken)
+
+			w := httptest.NewRecorder()
+			s.server.ServeHTTP(w, req)
+
+			assert.Equal(t, http.StatusOK, w.Code)
+			var res map[string]interface{}
+			err = json.Unmarshal(w.Body.Bytes(), &res)
+			if err != nil {
+				t.Fatal(err)
+			}
+			assert.Equal(t, float64(tc.wantCode), res["code"])
+			assert.Equal(t, tc.wantMsg, res["msg"])
+
+			// 验证返回了新的 token
+			newToken := w.Header().Get("x-jwt-token")
+			assert.NotEmpty(t, newToken)
+
+			if tc.after != nil {
+				tc.after(t, uid)
+			}
+		})
+	}
+}
+
 // 辅助方法：创建用户
 func (s *UserTestSuite) createUser(t *testing.T, email string) int64 {
 	// 确保数据不存在
@@ -499,6 +717,32 @@ func (s *UserTestSuite) login(t *testing.T, uid int64) string {
 	}
 	// 返回 Bearer token
 	return "Bearer " + token
+}
+
+func (s *UserTestSuite) loginWithRefreshToken(t *testing.T, uid int64) (string, string) {
+	var user dao.User
+	if err := s.db.First(&user, uid).Error; err != nil {
+		t.Fatal(err)
+	}
+	reqBody := map[string]string{
+		"email":    user.Email.String,
+		"password": "Password123!",
+	}
+	body, _ := json.Marshal(reqBody)
+	req, _ := http.NewRequest(http.MethodPost, "/users/login", bytes.NewBuffer(body))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+	s.server.ServeHTTP(w, req)
+	if w.Code != 200 {
+		t.Fatal("Login failed", w.Body.String())
+	}
+	token := w.Header().Get("x-jwt-token")
+	refreshToken := w.Header().Get("x-refresh-token")
+	if token == "" {
+		t.Fatal("Token not found in header")
+	}
+	// 返回 Bearer token
+	return "Bearer " + token, refreshToken
 }
 
 func TestUser(t *testing.T) {

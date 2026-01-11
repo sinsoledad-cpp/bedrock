@@ -11,6 +11,7 @@ import (
 	"bedrock/internal/repository/cache"
 	"bedrock/internal/repository/dao"
 	"bedrock/internal/service"
+	"bedrock/internal/service/sms/memory"
 	"bedrock/internal/web"
 	"bedrock/internal/web/middleware/jwt"
 	"github.com/gin-gonic/gin"
@@ -27,7 +28,10 @@ func InitUserHandler() *web.UserHandler {
 	userCache := cache.NewRedisUserCache(cmdable)
 	userRepository := repository.NewCachedUserRepository(userDAO, userCache, logger)
 	userService := service.NewUserService(logger, userRepository)
-	codeService := InitCodeService()
+	codeCache := cache.NewRedisCodeCache(cmdable)
+	codeRepository := repository.NewCachedCodeRepository(codeCache)
+	smsService := memory.NewService()
+	codeService := service.NewCodeService(codeRepository, smsService)
 	provider := InitStorageService()
 	handler := jwt.NewRedisJWTHandler(cmdable)
 	userHandler := web.NewUserHandler(logger, userService, codeService, provider, handler)
@@ -42,7 +46,10 @@ func InitWebServer() *gin.Engine {
 	userCache := cache.NewRedisUserCache(cmdable)
 	userRepository := repository.NewCachedUserRepository(userDAO, userCache, logger)
 	userService := service.NewUserService(logger, userRepository)
-	codeService := InitCodeService()
+	codeCache := cache.NewRedisCodeCache(cmdable)
+	codeRepository := repository.NewCachedCodeRepository(codeCache)
+	smsService := memory.NewService()
+	codeService := service.NewCodeService(codeRepository, smsService)
 	provider := InitStorageService()
 	handler := jwt.NewRedisJWTHandler(cmdable)
 	userHandler := web.NewUserHandler(logger, userService, codeService, provider, handler)
@@ -57,7 +64,8 @@ var thirdParty = wire.NewSet(
 	InitMySQL,
 	InitRedis,
 	InitStorageService,
-	InitCodeService,
 )
 
 var userSvc = wire.NewSet(cache.NewRedisUserCache, dao.NewGORMUserDAO, repository.NewCachedUserRepository, service.NewUserService)
+
+var codeSvc = wire.NewSet(cache.NewRedisCodeCache, repository.NewCachedCodeRepository, service.NewCodeService, memory.NewService)

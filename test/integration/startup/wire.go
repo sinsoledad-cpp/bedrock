@@ -7,6 +7,7 @@ import (
 	"bedrock/internal/repository/cache"
 	"bedrock/internal/repository/dao"
 	"bedrock/internal/service"
+	"bedrock/internal/service/sms/memory"
 	"bedrock/internal/web"
 	"bedrock/internal/web/middleware/jwt"
 
@@ -19,7 +20,6 @@ var thirdParty = wire.NewSet(
 	InitMySQL,
 	InitRedis,
 	InitStorageService,
-	InitCodeService,
 )
 
 var userSvc = wire.NewSet(
@@ -29,10 +29,18 @@ var userSvc = wire.NewSet(
 	service.NewUserService,
 )
 
+var codeSvc = wire.NewSet(
+	cache.NewRedisCodeCache,
+	repository.NewCachedCodeRepository,
+	service.NewCodeService,
+	memory.NewService,
+)
+
 func InitUserHandler() *web.UserHandler {
 	wire.Build(
 		thirdParty,
 		userSvc,
+		codeSvc,
 		jwt.NewRedisJWTHandler,
 		web.NewUserHandler,
 	)
@@ -43,6 +51,7 @@ func InitWebServer() *gin.Engine {
 	wire.Build(
 		thirdParty,
 		userSvc,
+		codeSvc,
 		jwt.NewRedisJWTHandler,
 		web.NewUserHandler,
 		InitGinServer,
