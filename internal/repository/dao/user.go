@@ -4,10 +4,11 @@ import (
 	"context"
 	"database/sql"
 	"errors"
-	"github.com/go-sql-driver/mysql"
-	"gorm.io/gorm"
 	"strings"
 	"time"
+
+	"github.com/go-sql-driver/mysql"
+	"gorm.io/gorm"
 )
 
 type User struct {
@@ -37,6 +38,7 @@ var (
 	ErrRecordNotFound  = gorm.ErrRecordNotFound
 )
 
+//go:generate mockgen -source=./user.go -package=mocks -destination=./mocks/user_mock.go UserDAO
 type UserDAO interface {
 	Insert(ctx context.Context, user User) error
 	FindByEmail(ctx context.Context, email string) (User, error)

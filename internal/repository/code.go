@@ -9,7 +9,7 @@ var ErrCodeVerifyTooMany = cache.ErrCodeVerifyTooMany
 var ErrCodeSendTooMany = cache.ErrCodeSendTooMany
 var ErrCodeExpired = cache.ErrCodeExpired
 
-//go:generate mockgen -source=./code.go -package=repomocks -destination=./mocks/code.mock.go CodeRepository
+//go:generate mockgen -source=./code.go -package=mocks -destination=./mocks/code_mock.go CodeRepository
 type CodeRepository interface {
 	Set(ctx context.Context, biz, phone, code string) error
 	Verify(ctx context.Context, biz, phone, code string) (bool, error)

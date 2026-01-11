@@ -13,7 +13,7 @@ import (
 // ErrKeyNotExist 因为我们目前还是只有一个实现，所以可以保持用别名
 var ErrKeyNotExist = redis.Nil
 
-//go:generate mockgen -source=./user.go -package=mocks -destination=mocks/user.mock.go UserCache
+//go:generate mockgen -source=./user.go -package=mocks -destination=mocks/user_mock.go UserCache
 type UserCache interface {
 	Delete(ctx context.Context, id int64) error
 	Get(ctx context.Context, id int64) (domain.User, error)
