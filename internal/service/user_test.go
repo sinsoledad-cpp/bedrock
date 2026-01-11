@@ -16,6 +16,7 @@ import (
 )
 
 func TestUserService_Signup(t *testing.T) {
+	t.Parallel()
 	testCases := []struct {
 		name    string
 		mock    func(ctrl *gomock.Controller) repository.UserRepository
@@ -58,7 +59,9 @@ func TestUserService_Signup(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
+		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 
@@ -71,6 +74,7 @@ func TestUserService_Signup(t *testing.T) {
 }
 
 func TestUserService_Login(t *testing.T) {
+	t.Parallel()
 	testCases := []struct {
 		name     string
 		mock     func(ctrl *gomock.Controller) repository.UserRepository
@@ -146,7 +150,9 @@ func TestUserService_Login(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
+		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 
@@ -163,6 +169,7 @@ func TestUserService_Login(t *testing.T) {
 }
 
 func TestUserService_FindOrCreate(t *testing.T) {
+	t.Parallel()
 	testCases := []struct {
 		name     string
 		mock     func(ctrl *gomock.Controller) repository.UserRepository
@@ -257,7 +264,9 @@ func TestUserService_FindOrCreate(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
+		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 
@@ -273,6 +282,7 @@ func TestUserService_FindOrCreate(t *testing.T) {
 }
 
 func TestUserService_UpdateAvatarPath(t *testing.T) {
+	t.Parallel()
 	testCases := []struct {
 		name    string
 		mock    func(ctrl *gomock.Controller) repository.UserRepository
@@ -324,7 +334,9 @@ func TestUserService_UpdateAvatarPath(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
+		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 
@@ -337,6 +349,7 @@ func TestUserService_UpdateAvatarPath(t *testing.T) {
 }
 
 func TestUserService_FindOrCreateByWechat(t *testing.T) {
+	t.Parallel()
 	testCases := []struct {
 		name       string
 		mock       func(ctrl *gomock.Controller) repository.UserRepository
@@ -425,7 +438,9 @@ func TestUserService_FindOrCreateByWechat(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
+		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 
@@ -441,6 +456,7 @@ func TestUserService_FindOrCreateByWechat(t *testing.T) {
 }
 
 func TestUserService_FindById(t *testing.T) {
+	t.Parallel()
 	testCases := []struct {
 		name     string
 		mock     func(ctrl *gomock.Controller) repository.UserRepository
@@ -477,7 +493,9 @@ func TestUserService_FindById(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
+		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 
@@ -493,6 +511,7 @@ func TestUserService_FindById(t *testing.T) {
 }
 
 func TestUserService_UpdateNonSensitiveInfo(t *testing.T) {
+	t.Parallel()
 	testCases := []struct {
 		name    string
 		mock    func(ctrl *gomock.Controller) repository.UserRepository
@@ -522,7 +541,9 @@ func TestUserService_UpdateNonSensitiveInfo(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
+		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 

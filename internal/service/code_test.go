@@ -15,6 +15,7 @@ import (
 )
 
 func TestCodeService_Send(t *testing.T) {
+	t.Parallel()
 	testCases := []struct {
 		name    string
 		mock    func(ctrl *gomock.Controller) (repository.CodeRepository, *smsMocks.MockService)
@@ -71,7 +72,9 @@ func TestCodeService_Send(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
+		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 
@@ -84,6 +87,7 @@ func TestCodeService_Send(t *testing.T) {
 }
 
 func TestCodeService_Verify(t *testing.T) {
+	t.Parallel()
 	testCases := []struct {
 		name      string
 		mock      func(ctrl *gomock.Controller) repository.CodeRepository
@@ -161,7 +165,9 @@ func TestCodeService_Verify(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
+		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 
